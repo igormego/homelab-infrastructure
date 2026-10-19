@@ -42,7 +42,10 @@ plex_samsung_playback_investigation:
   original: "With Force Direct Play off, original H.264 copy + DTS 5.1 to AAC 5.1 over MP4/DASH repeatedly buffered with embedded or external English SRT. Without subtitles the original played during observed tests; forced Direct Play previously lacked audio."
   diagnostic_copy: "Separate full-length remux in temporary non-ARR Plex library, item 1138: original H.264/DTS/regular SRT copied, AAC-LC 5.1 at 512 kb/s added, 36 chapters. DTS and AAC tests both buffered. AAC case observed 20 seconds buffering at 03:34.523 with H.264/AAC/SRT all copy over MP4/DASH. Copy also proved unreliable without subtitles."
   uncertainty: "Remux not established as valid control: complete timestamp/index validation missing; 21 ms relative stream start offset observed without demonstrated causal connection. AAC is not established as a fix; the file-specific or client/delivery contribution remains unknown."
-  next_action: "Read-only bounded validation of test remux versus original; then one instrumented original-file Samsung SRT playback to distinguish segment delivery failure from client request/consumption stall. No arbitrary settings toggles or ARR profile changes."
+  remux_validation: "2026-10-19: both files have usable SeekHead/Cues; diagnostic remux has 126519 clusters vs 10525 original and notably different packet interleaving. Video packet PTS offset +21 ms is constant across 2890 matching packets; causality and full timing integrity unproven."
+  instrumented_original_observation: "2026-10-19: 3-minute bounded observation (72 session samples) of original with embedded regular English SRT. Samsung reported unexpected playback error after stalls at 22:23.503 and 23:16.942. All 23 observed segment requests had HTTP 200 replies; final logged segment reply completed 15:40:26.686 local time, with no later segment requests in captured server log though control requests continued. Segments remained available and later accumulated. Plex API remained in buffering even after TV showed an error. No root cause established."
+  interpretation: "Server logs favor investigating Samsung client playback/request behavior over failed HTTP responses, but HTTP 200 does not prove successful decode and an absent server request does not prove the client never transmitted it; validate actual segment content or transport only if client logging leaves a meaningful gap."
+  next_action: "First check whether Samsung Plex app logs from the recorded failure already reached Plex Media Server.log. If not, use official Samsung Smart TV Advanced > Log to Media Server debugging for ONE bounded, instrumented reproduction and collect client-side playback errors; disable logging after. Do not repeat server-only experiments or change ARR profiles."
   preservation: "Original unchanged; diagnostic copy retained. No service, playback setting or ARR profile changes reported."
 
 current_gate: >
@@ -112,7 +115,7 @@ important_open_loops:
   - "Do not start historical Plex backfill implicitly."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
-  - "Samsung Walter Mitty buffering with subtitles remains unexplained. Validate the diagnostic remux and perform one instrumented original playback before proposing compatibility or ARR policy changes."
+  - "Samsung Walter Mitty buffering with subtitles remains unexplained after instrumented original playback; all 23 recorded segment HTTP responses were 200 but segment requests ceased before TV error. Next: Samsung Plex client debug logs, then targeted interpretation of client/segment handling."
 
 stale_or_unknown:
   - "The first outbound write was attempted exactly once but remains ambiguous; no matching history event is visible and no rollback history ID exists."
@@ -126,8 +129,9 @@ portfolio:
     explicit; general platform work may continue independently.
 
 verification:
-  last_verified: "2026-10-18"
+  last_verified: "2026-10-19"
   sources:
+    - "2026-10-19 user-provided Codex result: 72 samples; playback stalls at 22:23.503 and 23:16.942; 23/23 segment HTTP 200 responses; no later segment requests after 15:40:26.686 while control requests continued; TV displayed generic unexpected playback error; Plex remained buffering. Diagnostic remux valid SeekHead/Cues but different cluster/interleaving structure; cause unknown."
     - "2026-10-18 user-provided Codex diagnostics: original item 354 works in observed subtitle-off segments; full-length test remux item 1138 buffered with DTS and copied AAC, and at times without subtitles; original untouched; root cause and remux validity unresolved."
     - "2026-10-16: October 15/16 scheduled runs succeeded; deterministic daily and Thursday genre rotations and regressions passed. Trending-only deletion flag fixed and deployed; 16 pinned-image tests passed. Below-minimum live behavior after the fix remains unobserved."
     - "2026-10-14 Kometa Phase 2A PASS: Newly Released 2, Trending Now 3, Movie of the Day 1 (Inglourious Basterds), Director Spotlight 4 (Martin Scorsese), Genre Spotlight 12 (Thriller); exact !010 through !050 ordering."
