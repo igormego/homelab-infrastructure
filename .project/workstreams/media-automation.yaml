@@ -50,14 +50,41 @@ plex_samsung_playback_investigation:
   preservation: "Original unchanged; diagnostic copy retained. No service, playback setting or ARR profile changes reported."
 
 media_audio_profile_audit:
-  status: "Read-only verified audit - changes pending decision"
+  status: "Verified - approved Radarr policy deployed"
   observed_on: "2026-10-19"
-  plex_dashboard: "Samsung original Walter Mitty session paused at 25:48; H.264 1080p -> H.264 transcode, DTS 5.1 -> AAC transcode, English SRT burn-in, local connection. Screenshot verifies chosen processing path but not uninterrupted full-film playback."
-  radarr: "Profile 9 UHD Bluray + WEB serves 56 movies, upgrades enabled to Bluray-2160p; TRaSH/Recyclarr default Audio Formats scores heavily favor TrueHD Atmos (+5000), DTS:X (+4500), DD+ Atmos (+3000), DTS-HD MA (+2500), DD+ (+1750), DTS (+1250), AAC (+1000), AC3 (+750). 2160p quality priority preserved."
-  sonarr: "Profile 7 WEB-2160p (Alternative) serves 38 series with quality/CF upgrades enabled but no audio CF scores. Profile 5 Ultra-HD serves 17 series, upgrades disabled, no 1080p fallback; do not migrate implicitly."
-  config_owner: "Recyclarr 8 guide-managed Radarr 9 and Sonarr 7, with reset_unmatched_scores enabled; live override locations /data/docker/recyclarr/config/configs/uhd-bluray-web.yml and sonarr-web-2160p.yml. Regular Recyclarr execution was not confirmed."
-  proposed_policy: "Pending user decision: reduce Radarr audio scoring to small compatibility tie-breaks (AAC, AC3, E-AC3 variants) with DTS/lossless neutral, without blocking formats or changing video priorities. Evaluate setting upgrade.until_score=0 to prevent CF-only upgrades while keeping chosen quality upgrade policy. No changes authorized or made."
-  next_action: "Agree on Radarr audio and upgrade policy before making any Recyclarr edits; preserve Sonarr profiles. Treat subtitle burn-in as an observed playback workaround, not proven stable or evidence of a permanent root-cause fix."
+  radarr:
+    profile_id: 9
+    profile_name: "UHD Bluray + WEB"
+    audio_scores:
+      AAC: 1
+      DD: 1
+      DD+: 1
+      DD+ ATMOS: 1
+      DTS: 0
+      DTS-ES: 0
+      DTS-HD HRA: 0
+      DTS-HD MA: 0
+      DTS X: 0
+      TrueHD: 0
+      TrueHD ATMOS: 0
+      FLAC: 0
+      PCM: 0
+      ATMOS (undefined): 0
+    upgrade_allowed: true
+    upgrade_until_quality: "Bluray-2160p"
+    upgrade_until_score: 0
+    minimum_format_score: 0
+    minimum_upgrade_format_score: 1
+  previous_audio_scores: "AAC 1000; DD 750; DD+ 1750; DD+ ATMOS 3000; DTS 1250; DTS-ES 1500; DTS-HD HRA 2000; DTS-HD MA 2500; DTS X 4500; TrueHD 2750; TrueHD ATMOS 5000; FLAC/PCM 2250; ATMOS (undefined) 3000. Previous CF upgrade cutoff 10000."
+  config_owner: "Recyclarr 8.7.1; authoritative /data/docker/recyclarr/config/configs/uhd-bluray-web.yml. Explicit per-profile custom_formats overrides win over inherited TRaSH Audio Formats scores. Existing quality cutoff is explicit because the runtime requires until_quality with allowed=true and explicit qualities."
+  deployment: "One Radarr-only sync of uhd-bluray-web completed with exit 0 after preview. The run used the pre-existing TRaSH revision a63c1d05510d73887be1b0198f95a363c4f7bef6 through a temporary read-only resource/settings mount; persistent global settings were not changed."
+  scope_guard: "Latest guide preview would also add unrelated IMF +20; baseline resources prevented that addition. Review future guide synchronization diffs separately. Audio overrides remain authoritative across guide updates."
+  verification: "API before/after: all 14 audio scores correct; all 47 non-audio scores unchanged, including release tiers, HDR, Repack and negative penalties. Exact quality ordering/groups and other target fields unchanged. All other eight Radarr profiles, Radarr CF definitions and quality definitions unchanged; Sonarr profiles/CFs/quality definitions unchanged."
+  behavior: "2160p-first and 1080p fallback retained. Quality upgrades remain enabled up to Bluray-2160p; CF-only upgrades stop once the existing file meets score 0. Audio formats remain eligible, with no new negative audio scores. No search, grab, replacement, scan or service restart was triggered."
+  rollback: "Private original YAML, API before/after snapshots, preview/sync logs and verification retained outside the repository under the Recyclarr rollback directory."
+  sonarr: "Unchanged: profile 7 WEB-2160p (Alternative) serves 38 series with no audio CF scores; profile 5 Ultra-HD serves 17 series, upgrades disabled, no 1080p fallback. No Sonarr synchronization."
+  playback_boundary: "Compatibility preference policy is independent of the unresolved Walter Mitty/Samsung buffering investigation; this change is not evidence of a playback fix."
+  next_action: "No further profile changes required for this approval. Review guide drift before future Recyclarr sync; do not trigger searches or replacements to test the policy."
 
 current_gate: >
   Kometa Phase 2A ordinary Movies collections are accepted independently of Plex Pass.
@@ -73,7 +100,8 @@ current_gate: >
   the movie and then removed the torrent job and download-side content.
   Separately, Samsung playback of Walter Mitty with SRT remains unresolved; DTS/AAC
   remux comparison is inconclusive because the copy buffers even with AAC copy
-  and sometimes without subtitles. No acquisition-profile change is justified.
+  and sometimes without subtitles. The separately approved Radarr compatibility policy
+  is deployed; it does not establish the playback root cause or a buffering fix.
 
 current_state: >
   Five Movies discovery collections have October 16 counts 2/3/1/4/20, stable
@@ -127,7 +155,7 @@ important_open_loops:
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
   - "Samsung Walter Mitty playback with SRT remains unresolved; client debug logs were successfully captured but contain no explicit decoder/MediaSource error. After buffering at 21:36.366, play() interruption warning occurred later. Next: sanitize the evidence for the related Plex forum report and seek deeper Samsung HTML player telemetry; no repeat-only test."
-  - "Radarr/Sonarr profile audio audit completed read-only on 2026-10-19: Radarr has very high lossless-audio CF scores despite Samsung TV-speaker playback. Compatibility tie-break overrides and CF-only upgrade suppression are proposed, not approved; Sonarr unaffected."
+  - "Radarr audio policy deployed and API-verified on 2026-10-19: four compatible audio CFs +1, ten other audio CFs 0; CF cutoff 0 with quality upgrades retained. Future guide sync needs separate drift review (latest preview adds IMF +20); Sonarr unchanged."
 
 stale_or_unknown:
   - "The first outbound write was attempted exactly once but remains ambiguous; no matching history event is visible and no rollback history ID exists."
@@ -143,6 +171,7 @@ portfolio:
 verification:
   last_verified: "2026-10-19"
   sources:
+    - "2026-10-19 approved Radarr profile 9 deployment: Recyclarr 8.7.1 baseline-resource preview and one Radarr-only sync exit 0; API comparison verified only 14 audio scores and cutoffFormatScore 10000 -> 0 changed. All other profiles, 47 non-audio scores, CF definitions, quality definitions and Sonarr preserved; private rollback retained."
     - "2026-10-19 user-provided read-only Codex Radarr/Sonarr profile audit and Plex Dashboard screenshot: Radarr 9 high lossless audio scores, Sonarr 7 no audio scores, Sonarr 5 no 1080p fallback, Recyclarr-managed profiles; burn-in yields video and audio transcode. No profile writes or long-duration playback acceptance."
     - "2026-10-19 Codex client-log follow-up supplied by user: Samsung Plex 5.94.1/Tizen 9; SRT decoded 15 entries before buffering at 21:36.366 (15:52:30 CEST), later HTMLPlayer play()/pause() warning at 15:53:25, client stopped 15:54:11; no decoder, DASH, MediaSource or parser error captured. Earlier 23/23 HTTP 200 observations refer to separate session."
     - "2026-10-19 user-provided Codex result: 72 samples; playback stalls at 22:23.503 and 23:16.942; 23/23 segment HTTP 200 responses; no later segment requests after 15:40:26.686 while control requests continued; TV displayed generic unexpected playback error; Plex remained buffering. Diagnostic remux valid SeekHead/Cues but different cluster/interleaving structure; cause unknown."
