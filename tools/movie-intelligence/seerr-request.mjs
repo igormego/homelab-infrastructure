@@ -112,6 +112,15 @@ class SeerrClient {
   }
 }
 
+// Read-only reuse by the separate reacquisition boundary. No submit capability escapes.
+export async function readSeerrReacquisitionSafety(config, tmdb) {
+  const client = new SeerrClient(config);
+  if (!await client.access()) throw new Error('seerr_unavailable');
+  const movie = await client.movie(tmdb);
+  const requests = await client.requests();
+  return { movie, requests: requests.filter(r => r.tmdb_id === tmdb) };
+}
+
 /** Read adapters are trusted application dependencies, never user query fields. */
 export function createMovieRequestController({ seerr, movieIntelligence, radarr, clock = () => new Date() }) {
   // Construct lazily so invalid configuration also produces a sanitized audit result.

@@ -6,6 +6,10 @@
 
 ## Decision
 
+Later scoped exception: [ADR 004](004-explicit-movie-reacquisition.md) introduces
+a separate reacquisition operation for existing unmonitored/no-file movies;
+this ADR's ordinary `request_movie` behavior remains unchanged.
+
 Use Seerr as the sole mutation gateway for agent movie requests. Preserve Movie Intelligence and Radarr as read-only preflight sources and retain Seerr/Media Automation ownership of media policy. A controller returns plans by default and requires a call-level execution opt-in; no global write switch exists.
 
 Resolve to a TMDb movie ID, fail closed on uncertain identity/source state, and refuse duplicates, existing managed titles, unavailable policy and TV requests. Send only the exact movie-request body through Seerr's configured defaults. After submission, verify request identity by read-back. Do not persist IDs, audit logs or settings inside this module.

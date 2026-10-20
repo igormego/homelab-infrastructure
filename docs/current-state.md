@@ -1,5 +1,16 @@
 # Current State
 
+## My Cinema reacquisition v0.1 — component-tested — 2026-10-20
+
+The separate [reacquisition controller](../tools/movie-intelligence/REACQUIRE.md)
+plans by default, requires explicit execution plus a reviewed fingerprint, and
+preserves existing movie policy using a monitor-only Radarr update followed by
+one search. Durable receipts block concurrent/repeated or uncertain execution.
+All 123 tests passed, including 60 unchanged existing tests. No live reacquisition,
+deployment, download, monitoring change or Seerr POST was performed. Next: select
+one qualifying non-Zodiac candidate and obtain separate live-test authorization.
+Accepted Zodiac/Samsung and Seerr archive isolation layers remain unchanged.
+
 ## Kometa Phase 2A — runtime accepted; Trending correction component-tested — 2026-10-16
 
 October 15 and 16 automatic 03:15 UTC runs completed successfully without overlap

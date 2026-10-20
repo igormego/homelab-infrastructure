@@ -92,6 +92,16 @@ posterizarr_assets_idea:
   concept: "Evaluate Posterizarr with Kometa local image assets as source-of-truth for chosen posters/backgrounds and later optional overlays; cache versus persistent assets and consistent collection/poster styling. May suit both Movies and archived Watched libraries."
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
+my_cinema_reacquisition:
+  status: "Component-tested — not deployed or live-write-accepted"
+  verified_on: "2026-10-20"
+  implementation: "Separate plan_reacquire_movie/reacquire_movie; default dry-run. Explicit execute=true and reviewed fingerprint required. Existing request_movie/already_managed behavior unchanged."
+  architecture: "Radarr 6.1.1.10360 single-target movie/editor monitored-only PUT, full preservation read-back, then one MoviesSearch command. Native Seerr path rejected because it can apply profile/root/minimumAvailability/tags defaults. No Seerr POST."
+  safeguards: "Unique canonical TMDb/consistent IMDb; unmonitored/no file; complete queue/request checks; scoped real Plex Movies availability; profile/root/settings preservation. Private durable exclusive receipts block concurrent/repeated/uncertain execution across process restarts; no automatic retry or rollback."
+  validation: "123 offline tests passed, including all 60 existing tests unchanged. New coverage includes process concurrency, restart idempotency, API uncertainty, identity/policy conflicts and post-monitor drift. Live access confirmed Radarr version and required Radarr/Plex response schemas; no movie mutation, request, search, deployment or download."
+  limitations: "No distributed transaction with external operators; one lifecycle per identity, common canonical Radarr URL/private journal required. Monitoring may remain enabled after partial failure. Submitted command is not acquisition acceptance."
+  next_action: "Select one non-Zodiac managed/unmonitored/no-file candidate without queue/request/real Plex availability conflict. Separately authorize deployment/private durable journal provisioning, review fresh plan and approve exactly one live execute call. No automatic retry; retain receipt and verify resulting state."
+
 my_cinema_seerr_isolation:
   status: "Verified PASS — no change necessary"
   observed_on: "2026-10-20"
@@ -99,7 +109,7 @@ my_cinema_seerr_isolation:
   zodiac: "No Seerr mediaInfo, no available status, no existing request across 23 inspected requests, no Radarr entry. Placeholder does not currently create false availability; caches for other historically synced libraries remain a separate caveat."
   reacquisition: "Movies absent from Radarr can follow the existing gated Seerr request flow. Existing unmonitored no-file Radarr movies return already_managed in the accepted controller. Native Seerr re-request path can monitor and search such films but also applies configured profile, root, minimumAvailability and tags; must not bypass already_managed without a new exact-policy check."
   changes: "None: no requests/searches/downloads/sync changes/Trakt writes."
-  next_action: "Design bounded explicit reacquire_movie for managed unmonitored movies without files. Check exact TMDb/Radarr identity, no active queue/request, current quality profile/root/minimum availability/tags before approval of one Seerr/ARR write. Keep archive Plex library excluded from Seerr sync."
+  next_action: "Reacquisition implementation is component-tested; see my_cinema_reacquisition for the separate live authorization boundary. Keep archive Plex library excluded from Seerr sync."
 
 my_cinema_zodiac_placeholder_poc:
   status: "Server PASS; Samsung poster and detail PASS per user"
@@ -110,7 +120,7 @@ my_cinema_zodiac_placeholder_poc:
   samsung: "2026-10-20 owner confirms Samsung Plex shows proper poster and detailed movie view exactly like ordinary movies."
   rollback: "Private rollback manifest at /data/docker/plex/my-cinema-zodiac-poc/private/rollback.json. Keep test library/file intact until user elects cleanup; do not delete library ID 4 without re-verifying identity/root."
   implications: "Proves a never-indexed film can be represented in Samsung Plex with an isolated tiny valid synthetic MP4; does NOT prove automated historical backfill, date retention, Radarr↔Plex lifecycle, re-download workflow or safe scaling."
-  next_action: "Seerr archive isolation PASS without changes; next separately design safe reacquire_movie for Radarr already-managed/unmonitored/no-file movies, and then test one reversible archive-to-real-to-archive cycle. Keep archive separated from main Movies Kometa runs. No bulk backfill yet."
+  next_action: "Seerr archive isolation PASS without changes; reacquire_movie is component-tested, pending separately authorized live acceptance for a qualifying non-Zodiac candidate. Archive lifecycle testing follows later. Keep archive separated from main Movies Kometa runs. No bulk backfill yet."
 
 plex_watched_history_backfill:
   status: "Read-only live preflight complete; Plex historical watched-state auto-backfill not indicated by user intent"
@@ -202,7 +212,7 @@ dependencies:
 important_open_loops:
   - "Classify the sanitized original Mortgully POST response/audit. Keep delivery ambiguous unless the evidence definitively proves no Trakt event was created; only then consider one explicit retry."
   - "Plex watched-date preflight (2026-10-20): 49 current films, 5 exact identity matches and 2 state differences. User confirmed 28 Days Later was seen on VHS long ago but downloaded for possible rewatch, so Plex Unwatched is intentional; withdraw first-write proposal and do not auto-sync historical watched into Plex. Keep approximate watched dates in media.db/Trakt with provenance. Dune resume/timestamp must remain intact."
-  - "My Cinema: Zodiac placeholder PoC server + Samsung poster/details PASS. Seerr isolation PASS without changes: only Movies 1/TV Shows 2 scanned, archive ID 4 excluded, Zodiac not Available/no request. Next safe reacquire_movie for existing Radarr unmonitored/no-file titles requires exact profile/root/queue/request preflight, then one archive lifecycle test. No bulk historical import or changes to watched state."
+  - "My Cinema: Zodiac/Samsung and Seerr isolation accepted. Safe reacquire_movie now component-tested (123 tests); next separately authorize one qualifying non-Zodiac live test with private durable receipts. No live reacquisition, bulk historical import or watched-state change."
   - "Posterizarr / Kometa local poster-background assets is a deferred visual enhancement candidate for Movies and later Watched; keep out of current implementation until archive and reacquisition lifecycle works."
   - "Do not start historical Plex backfill implicitly."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."

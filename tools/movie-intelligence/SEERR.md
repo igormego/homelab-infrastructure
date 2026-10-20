@@ -109,4 +109,8 @@ Read-only discovery on 2026-09-26 confirmed Seerr 3.4.1, admin API visibility, w
 
 The later live acceptance issue must select one explicit user-approved movie, review the dry-run identity/policy, authorize one execute call, retain its audit result and verify Seerr → Radarr → acquisition/Plex as appropriate. Stop on ambiguous identity or uncertain submission. Do not implement that acceptance in Issue #14.
 
+Existing managed movies still return `already_managed`. The separately approved
+[reacquisition controller](REACQUIRE.md) handles the unmonitored/no-file case with
+its own explicit execution and durable replay boundary; no behavior here changes.
+
 See [ADR 003](../../docs/decisions/003-controlled-seerr-movie-request.md) and the [read-layer runbook](README.md). Source semantics: [Seerr v3.4.1 request entity](https://github.com/seerr-team/seerr/blob/v3.4.1/server/entity/MediaRequest.ts), [ARR defaults](https://github.com/seerr-team/seerr/blob/v3.4.1/server/subscriber/MediaRequestSubscriber.ts), [service reads](https://github.com/seerr-team/seerr/blob/v3.4.1/server/routes/service.ts).
