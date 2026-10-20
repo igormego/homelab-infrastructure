@@ -87,15 +87,15 @@ media_audio_profile_audit:
   next_action: "No further profile changes required for this approval. Review guide drift before future Recyclarr sync; do not trigger searches or replacements to test the policy."
 
 my_cinema_zodiac_placeholder_poc:
-  status: "Server PASS; Samsung Watched — Test item visibility user-confirmed; Samsung poster/detail check not separately reported"
+  status: "Server PASS; Samsung poster and detail PASS per user"
   observed_on: "2026-10-20"
   identity: "Zodiac (2007), David Fincher; TMDb 1949; IMDb tt0443706. Preflight found no existing Zodiac in Plex Movies, Radarr or media.db; selected as isolated technical test, not proved part of historical watched database."
   placeholder: "Single synthetic MP4 H.264 yuv420p 640x360 24fps 60s, no audio or copyrighted footage, 66268 bytes (~65 KiB), labeled ARCHIVE PLACEHOLDER / NOT THE ACTUAL FILM / ZODIAC (2007). Host PoC under /data/docker/plex/my-cinema-zodiac-poc/ outside ARR/media roots."
   plex: "Temporary Watched — Test library ID 4, ratingKey 1240, Plex-only root /config/my-cinema-zodiac-poc/library. Matched correct identity/poster/metadata; server poster fetch 68821 bytes; media exists/accessible; no viewCount/lastViewedAt; no watch/scrobble/play. Movies count 49 -> 49; TV Shows 52 -> 52, unchanged metadata."
-  samsung: "User reported 'vidim vo watched test' on Samsung Plex; visibility accepted. Poster/detail content not explicitly re-confirmed."
+  samsung: "2026-10-20 owner confirms Samsung Plex shows proper poster and detailed movie view exactly like ordinary movies."
   rollback: "Private rollback manifest at /data/docker/plex/my-cinema-zodiac-poc/private/rollback.json. Keep test library/file intact until user elects cleanup; do not delete library ID 4 without re-verifying identity/root."
   implications: "Proves a never-indexed film can be represented in Samsung Plex with an isolated tiny valid synthetic MP4; does NOT prove automated historical backfill, date retention, Radarr↔Plex lifecycle, re-download workflow or safe scaling."
-  next_action: "Confirm Zodiac poster/detail on Samsung if needed, then scope one realistic low-risk end-to-end archive lifecycle test and identity/membership rules before implementing bulk generation. Do not bulk-add historical titles or change Radarr/Trakt/Plex watched state."
+  next_action: "Before scaling, exclude Watched archive library from Seerr Plex library scanning to avoid false available status, and do not mix placeholder entries into main Movies Kometa rotation. Confirm how to reacquire a Radarr-managed movie without file, then validate one archive-to-real-to-archive cycle. No bulk backfill yet."
 
 plex_watched_history_backfill:
   status: "Read-only live preflight complete; Plex historical watched-state auto-backfill not indicated by user intent"
