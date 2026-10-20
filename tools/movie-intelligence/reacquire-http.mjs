@@ -82,6 +82,9 @@ export async function plexConflict(config, tmdb, imdb) {
   const key = requiredId(matches[0].ratingKey);
   const detail = array((await client.call(`library/metadata/${key}?checkFiles=1&includeGuids=1`)).MediaContainer?.Metadata);
   if (detail.length !== 1 || requiredId(detail[0].ratingKey) !== key || String(detail[0].librarySectionID) !== library) fail();
+  const beforeIds = array(matches[0].Guid).map(g => g.id).sort();
+  const afterIds = array(detail[0].Guid).map(g => g.id).sort();
+  if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) fail();
   const parts = array(detail[0].Media).flatMap(m => array(m.Part));
   // Only explicit non-existence is sufficient. Missing/inaccessible flags block.
   return !parts.length || parts.some(p => p.exists !== false && p.exists !== 0 && p.exists !== '0');

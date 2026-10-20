@@ -101,8 +101,8 @@ The wrapper never cancels downloads, deletes files or changes watched history.
 
 ## Validation and next live boundary
 
-`node --test test/*.test.mjs`: **122 passing tests**, including all 60 pre-existing
-tests unchanged and 62 new cases. Synthetic HTTP fixtures cover preservation,
+`node --test test/*.test.mjs`: **123 passing tests**, including all 60 pre-existing
+tests unchanged and 63 new cases. Synthetic HTTP fixtures cover preservation,
 identity conflicts, queue/request/cache blocks, Plex scope, API failures,
 post-monitor drift, uncertain outcomes, restart/replay, two controllers and
 exclusive reservation across two OS processes. No live request/search occurred.

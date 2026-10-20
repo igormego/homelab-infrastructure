@@ -51,7 +51,7 @@ function harness(t) {
       assert.equal(options.method, 'GET');
       if (p === '/library/sections') return response({ MediaContainer: { Directory: [{ key: '1', type: 'movie', title: 'Movies' }, { key: '4', type: 'movie', title: 'Watched — Test' }] } });
       if (p.startsWith('/library/sections/1/all?')) return response({ MediaContainer: { totalSize: h.plexRows.length, size: h.plexRows.length, Metadata: h.plexRows } });
-      if (p === '/library/metadata/30?checkFiles=1&includeGuids=1') return response({ MediaContainer: { Metadata: [{ ratingKey: '30', librarySectionID: '1', Media: [{ Part: h.parts }] }] } });
+      if (p === '/library/metadata/30?checkFiles=1&includeGuids=1') return response({ MediaContainer: { Metadata: [{ ratingKey: '30', librarySectionID: '1', Guid: h.plexRows[0]?.Guid, Media: [{ Part: h.parts }] }] } });
     }
     throw new Error('unexpected fixture endpoint');
   };
@@ -131,6 +131,14 @@ test('wrong Plex section and unknown identities fail closed', async t => {
   const h = harness(t); h.config.plex.moviesLibraryId = 4; h.controller = h.create();
   assert.equal((await h.execute()).decision, 'blocked');
   h.config.plex.moviesLibraryId = 1; h.controller = h.create(); h.plexRows = [{ ratingKey: '30', Guid: [] }];
+  assert.equal((await h.execute()).decision, 'blocked'); assert.equal(h.writes().length, 0);
+});
+
+test('Plex metadata identity drift during file-existence check blocks', async t => {
+  const h = harness(t); h.plexRows = [{ ratingKey: '30', Guid: [{ id: 'tmdb://123' }] }];
+  h.override = p => p.startsWith('/library/metadata/30?') ? response({ MediaContainer: { Metadata: [{
+    ratingKey: '30', librarySectionID: '1', Guid: [{ id: 'tmdb://456' }], Media: [{ Part: [{ exists: false }] }],
+  }] } }) : undefined;
   assert.equal((await h.execute()).decision, 'blocked'); assert.equal(h.writes().length, 0);
 });
 

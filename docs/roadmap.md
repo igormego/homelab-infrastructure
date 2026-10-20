@@ -4,7 +4,7 @@
 
 - **Component-tested:** separate [reacquire_movie v0.1](../tools/movie-intelligence/REACQUIRE.md),
   monitor-only Radarr update plus one search, reviewed plan, durable replay guards;
-  122 tests pass. Ordinary `request_movie` and media policy remain unchanged.
+  123 tests pass. Ordinary `request_movie` and media policy remain unchanged.
 - **Next:** separately authorize deployment/private journal provisioning and one
   qualifying managed/unmonitored/no-file candidate's live acceptance. No real
   request or reacquisition has been executed. Bulk archive lifecycle work remains deferred.
