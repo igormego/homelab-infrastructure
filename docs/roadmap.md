@@ -1,5 +1,14 @@
 # Roadmap
 
+## My Cinema safe reacquisition — 2026-10-20
+
+- **Component-tested:** separate [reacquire_movie v0.1](../tools/movie-intelligence/REACQUIRE.md),
+  monitor-only Radarr update plus one search, reviewed plan, durable replay guards;
+  122 tests pass. Ordinary `request_movie` and media policy remain unchanged.
+- **Next:** separately authorize deployment/private journal provisioning and one
+  qualifying managed/unmonitored/no-file candidate's live acceptance. No real
+  request or reacquisition has been executed. Bulk archive lifecycle work remains deferred.
+
 ## Kometa v2 Phase 2A — runtime accepted — 2026-10-16
 
 - **Verified:** October 15/16 scheduled runs; five Movies collections with October 16 counts 2/3/1/4/20, deterministic

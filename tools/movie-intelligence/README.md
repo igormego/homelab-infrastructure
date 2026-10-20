@@ -1,5 +1,9 @@
 # Movie Intelligence read-only control plane v0.1
 
+The separate [safe reacquisition operation](REACQUIRE.md) is component-tested for
+already-managed, unmonitored, no-file movies. It does not weaken the existing
+request controller's `already_managed` guard. No live reacquisition has occurred.
+
 The read APIs below remain non-mutating. The separate [controlled Seerr movie-request wrapper](SEERR.md) adds an explicit opt-in Act boundary; it is component-tested and has not sent a live request.
 
 **Component-tested locally; not deployed or live-accepted.** Implements [Issue #9](https://github.com/Az1mutt/homelab-infrastructure/issues/9). Requires Node.js **24.14+** with `node:sqlite`; no third-party packages, installation, server, Docker or shell wrapper. Tests passed on Node 24.19.0. The CLI reads personal data: keep its output private.
