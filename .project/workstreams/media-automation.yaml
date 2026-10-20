@@ -86,6 +86,17 @@ media_audio_profile_audit:
   playback_boundary: "Compatibility preference policy is independent of the unresolved Walter Mitty/Samsung buffering investigation; this change is not evidence of a playback fix."
   next_action: "No further profile changes required for this approval. Review guide drift before future Recyclarr sync; do not trigger searches or replacements to test the policy."
 
+my_cinema_zodiac_placeholder_poc:
+  status: "Server PASS; Samsung Watched — Test item visibility user-confirmed; Samsung poster/detail check not separately reported"
+  observed_on: "2026-10-20"
+  identity: "Zodiac (2007), David Fincher; TMDb 1949; IMDb tt0443706. Preflight found no existing Zodiac in Plex Movies, Radarr or media.db; selected as isolated technical test, not proved part of historical watched database."
+  placeholder: "Single synthetic MP4 H.264 yuv420p 640x360 24fps 60s, no audio or copyrighted footage, 66268 bytes (~65 KiB), labeled ARCHIVE PLACEHOLDER / NOT THE ACTUAL FILM / ZODIAC (2007). Host PoC under /data/docker/plex/my-cinema-zodiac-poc/ outside ARR/media roots."
+  plex: "Temporary Watched — Test library ID 4, ratingKey 1240, Plex-only root /config/my-cinema-zodiac-poc/library. Matched correct identity/poster/metadata; server poster fetch 68821 bytes; media exists/accessible; no viewCount/lastViewedAt; no watch/scrobble/play. Movies count 49 -> 49; TV Shows 52 -> 52, unchanged metadata."
+  samsung: "User reported 'vidim vo watched test' on Samsung Plex; visibility accepted. Poster/detail content not explicitly re-confirmed."
+  rollback: "Private rollback manifest at /data/docker/plex/my-cinema-zodiac-poc/private/rollback.json. Keep test library/file intact until user elects cleanup; do not delete library ID 4 without re-verifying identity/root."
+  implications: "Proves a never-indexed film can be represented in Samsung Plex with an isolated tiny valid synthetic MP4; does NOT prove automated historical backfill, date retention, Radarr↔Plex lifecycle, re-download workflow or safe scaling."
+  next_action: "Confirm Zodiac poster/detail on Samsung if needed, then scope one realistic low-risk end-to-end archive lifecycle test and identity/membership rules before implementing bulk generation. Do not bulk-add historical titles or change Radarr/Trakt/Plex watched state."
+
 plex_watched_history_backfill:
   status: "Read-only live preflight complete; Plex historical watched-state auto-backfill not indicated by user intent"
   reported_on: "2026-10-20"
@@ -108,7 +119,7 @@ plex_watched_history_backfill:
   first_write_gate: "2026-10-20 user clarified 28 Days Later was watched long ago on VHS but recently downloaded for a possible rewatch; current Plex Unwatched is intentional/useful. Withdraw this item as first-write candidate. No automatic media.db watched -> Plex scrobble; no other writes authorized."
   shelf_request_idea: "Future My Cinema vision: browse watched posters absent from local Plex library and issue Seerr re-requests; Plex native library watched marks are not a permanent catalog of deleted movies. Plex Watchlist -> Seerr auto request may supply a limited, opt-in request path, but automatic 4K requests and watched-library separation require design."
   preservation: "Preflight read-only: no Plex, Trakt, ledger, service or repository code/config changes; Mortgully ambiguous Trakt POST remains no-retry."
-  next_action: "Prioritize BACKFILL for movies never indexed in Plex, distinct from FORWARD-FILL on deleted formerly indexed files. User rejects treating indefinitely unemptied Plex trash as durable watched archive. Explore and risk-assess Samsung-visible independent watched poster shelf without full media, comparing Plex Lists (currently not documented on Samsung), isolated minimal valid placeholder-media library, and any supported metadata-only method; verify one never-indexed sample with controlled opt-in PoC before scaling. Preserve Radarr unmonitored records and original watch-date provenance. No automatic bulk import, media deletion, scrobble, Trakt write or Plex DB edits."
+  next_action: "Zodiac placeholder PoC achieved server PASS and user-confirmed Samsung item visibility in Watched — Test. Before scaling, validate actual Samsung poster/details (not yet separately reported), then scope one reversible end-to-end lifecycle transition for a verified historical movie, preserving Plex/Radarr identity, no-files semantics and manual file-retention control. Avoid mass imports, Plex watched writes, or Trakt writes."
 
 current_gate: >
   Kometa Phase 2A ordinary Movies collections are accepted independently of Plex Pass.
@@ -176,7 +187,7 @@ dependencies:
 important_open_loops:
   - "Classify the sanitized original Mortgully POST response/audit. Keep delivery ambiguous unless the evidence definitively proves no Trakt event was created; only then consider one explicit retry."
   - "Plex watched-date preflight (2026-10-20): 49 current films, 5 exact identity matches and 2 state differences. User confirmed 28 Days Later was seen on VHS long ago but downloaded for possible rewatch, so Plex Unwatched is intentional; withdraw first-write proposal and do not auto-sync historical watched into Plex. Keep approximate watched dates in media.db/Trakt with provenance. Dune resume/timestamp must remain intact."
-  - "My Cinema refined: separate BACKFILL of never-indexed watched titles from FORWARD-FILL when a previously indexed movie file is removed via Radarr. Radarr Unmonitored without a file can hold catalog metadata but cannot create a Plex library movie. Plex trash preservation verified on Malignant with autoEmptyTrash=0, but user does not want indefinite trash as archive. Next solve Samsung-visible never-indexed poster shelf via one isolated PoC; do not bulk import."
+  - "My Cinema: Zodiac placeholder PoC server PASS (valid synthetic 65 KiB H.264 MP4, Plex Watched — Test ID 4, correct poster/identity); user confirms Samsung library-item visibility, full poster/detail not explicitly reconfirmed. Next test one reversible archive-to-active/active-to-archive transition and ID mapping before any bulk historical backfill. Preserve independent Radarr and media.db historical truth; no mass creation or Plex watched changes."
   - "Do not start historical Plex backfill implicitly."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
