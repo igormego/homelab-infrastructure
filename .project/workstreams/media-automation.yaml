@@ -86,6 +86,12 @@ media_audio_profile_audit:
   playback_boundary: "Compatibility preference policy is independent of the unresolved Walter Mitty/Samsung buffering investigation; this change is not evidence of a playback fix."
   next_action: "No further profile changes required for this approval. Review guide drift before future Recyclarr sync; do not trigger searches or replacements to test the policy."
 
+posterizarr_assets_idea:
+  status: "Deferred — user requested to retain for future"
+  captured_on: "2026-10-20"
+  concept: "Evaluate Posterizarr with Kometa local image assets as source-of-truth for chosen posters/backgrounds and later optional overlays; cache versus persistent assets and consistent collection/poster styling. May suit both Movies and archived Watched libraries."
+  priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
+
 my_cinema_seerr_isolation:
   status: "Verified PASS — no change necessary"
   observed_on: "2026-10-20"
@@ -197,6 +203,7 @@ important_open_loops:
   - "Classify the sanitized original Mortgully POST response/audit. Keep delivery ambiguous unless the evidence definitively proves no Trakt event was created; only then consider one explicit retry."
   - "Plex watched-date preflight (2026-10-20): 49 current films, 5 exact identity matches and 2 state differences. User confirmed 28 Days Later was seen on VHS long ago but downloaded for possible rewatch, so Plex Unwatched is intentional; withdraw first-write proposal and do not auto-sync historical watched into Plex. Keep approximate watched dates in media.db/Trakt with provenance. Dune resume/timestamp must remain intact."
   - "My Cinema: Zodiac placeholder PoC server + Samsung poster/details PASS. Seerr isolation PASS without changes: only Movies 1/TV Shows 2 scanned, archive ID 4 excluded, Zodiac not Available/no request. Next safe reacquire_movie for existing Radarr unmonitored/no-file titles requires exact profile/root/queue/request preflight, then one archive lifecycle test. No bulk historical import or changes to watched state."
+  - "Posterizarr / Kometa local poster-background assets is a deferred visual enhancement candidate for Movies and later Watched; keep out of current implementation until archive and reacquisition lifecycle works."
   - "Do not start historical Plex backfill implicitly."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
