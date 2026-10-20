@@ -86,6 +86,20 @@ media_audio_profile_audit:
   playback_boundary: "Compatibility preference policy is independent of the unresolved Walter Mitty/Samsung buffering investigation; this change is not evidence of a playback fix."
   next_action: "No further profile changes required for this approval. Review guide drift before future Recyclarr sync; do not trigger searches or replacements to test the policy."
 
+plex_watched_history_backfill:
+  status: "Read-only live preflight completed; first write not authorized"
+  reported_on: "2026-10-20"
+  scope: "Owner-account main Movies library only; temporary diagnostic library excluded."
+  plex_inventory: "49 movies, 6 watched, 43 unwatched; 13 metadata items have lastViewedAt, not proof of completed viewing; 48/49 have TMDb+IMDb+Plex movie GUID. API yielded 13 owner playback history records."
+  media_db_inventory: "687 movies, 561 watched at preflight; historical Trakt backfill of 558 movies remains previously accepted and is not reopened."
+  comparison: "Five positive TMDb+IMDb matches: 3 watched both, 2 media.db watched but Plex unwatched. Three Plex-watched entries have no unambiguous media.db linkage; 44 Plex items have no direct external-ID match; 553 watched media.db entries with IDs lack matching currently held Plex files and 3 watched entries lack external IDs. Absence from current library does not establish historical absence."
+  candidates: "28 Days Later (2002), TMDb 170/IMDb tt0289043: Plex unwatched, media.db watched, no Plex resume/history/timestamp; media.db watched_at 2024-05-20 with unverified provenance. Dune (2021), TMDb 438631/IMDb tt1160419: unwatched in Plex but has existing timestamp and resume 38:28; excluded from first write."
+  date_contract: "Documented Plex /:/scrobble changes played flag without creating playback history; no documented historical datetime argument. Plex profile/activity feed supports manual Edit Watched Date for account-side history when applicable, but equivalence to server watchedAt/history and programmable import remains unproven. Legacy placeholder dates are useful approximation only when explicitly labeled; do not silently promote to actual watch events."
+  first_write_gate: "After clarifying date/account-history behavior and explicit approval, one bounded scrobble on 28 Days Later with fresh identity+state check and private rollback evidence. No bulk import or synthetic history writes."
+  shelf_request_idea: "Future My Cinema vision: browse watched posters absent from local Plex library and issue Seerr re-requests; Plex native library watched marks are not a permanent catalog of deleted movies. Plex Watchlist -> Seerr auto request may supply a limited, opt-in request path, but automatic 4K requests and watched-library separation require design."
+  preservation: "Preflight read-only: no Plex, Trakt, ledger, service or repository code/config changes; Mortgully ambiguous Trakt POST remains no-retry."
+  next_action: "Determine intended handling of approximate watched_at dates, verify whether Plex account Profile watch activity/date can be edited safely for one selected candidate and whether state sync is enabled; then explicitly approve one bounded controlled write rather than bulk-scrobbling. No need to repeat Trakt historical backfill or ledger acceptance."
+
 current_gate: >
   Kometa Phase 2A ordinary Movies collections are accepted independently of Plex Pass.
   Scheduled execution and daily/Thursday rotation are runtime accepted; the Trending
@@ -151,6 +165,7 @@ dependencies:
 
 important_open_loops:
   - "Classify the sanitized original Mortgully POST response/audit. Keep delivery ambiguous unless the evidence definitively proves no Trakt event was created; only then consider one explicit retry."
+  - "Plex watched-date backfill preflight (2026-10-20) identified 49 main-library films, only 5 exact external-ID matches against media.db and 2 watched-state discrepancies; a safe date-preserving backfill remains unproven. Keep 28 Days Later first-write candidate pending explicit approval, and exclude Dune with existing resume/timestamp."
   - "Do not start historical Plex backfill implicitly."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
