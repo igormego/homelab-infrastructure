@@ -93,14 +93,16 @@ posterizarr_assets_idea:
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
 my_cinema_reacquisition:
-  status: "Component-tested — not deployed or live-write-accepted"
-  verified_on: "2026-10-20"
+  status: "Runtime provisioned; candidate preflight blocked; not live-write-accepted"
+  verified_on: "2026-10-21"
   implementation: "Separate plan_reacquire_movie/reacquire_movie; default dry-run. Explicit execute=true and reviewed fingerprint required. Existing request_movie/already_managed behavior unchanged."
   architecture: "Radarr 6.1.1.10360 single-target movie/editor monitored-only PUT, full preservation read-back, then one MoviesSearch command. Native Seerr path rejected because it can apply profile/root/minimumAvailability/tags defaults. No Seerr POST."
   safeguards: "Unique canonical TMDb/consistent IMDb; unmonitored/no file; complete queue/request checks; scoped real Plex Movies availability; profile/root/settings preservation. Private durable exclusive receipts block concurrent/repeated/uncertain execution across process restarts; no automatic retry or rollback."
   validation: "123 offline tests passed, including all 60 existing tests unchanged. New coverage includes process concurrency, restart idempotency, API uncertainty, identity/policy conflicts and post-monitor drift. Live access confirmed Radarr version and required Radarr/Plex response schemas; no movie mutation, request, search, deployment or download."
   limitations: "No distributed transaction with external operators; one lifecycle per identity, common canonical Radarr URL/private journal required. Monitoring may remain enabled after partial failure. Submitted command is not acquisition acceptance."
-  next_action: "Select one non-Zodiac managed/unmonitored/no-file candidate without queue/request/real Plex availability conflict. Separately authorize deployment/private durable journal provisioning, review fresh plan and approve exactly one live execute call. No automatic retry; retain receipt and verify resulting state."
+  runtime_preparation: "Accepted commit 81e5bee1: seven unchanged modules deployed to a versioned runtime directory. Existing pinned Node container provides v24.21.0 one-shot execution; no background service. Private directories 0700/files 0600 on persistent ext4; exclusive two-process reservation and new-container receipt persistence passed in a separate synthetic provisioning namespace. Real operation journal remains empty; existing credentials passed only in memory."
+  dry_run: "2026-10-21: Heretic, Malignant and One Battle After Another are watched in media.db, unmonitored/no-file in Radarr with profile 9 and existing root. No candidate passed: one real Movies item lacks canonical TMDb/IMDb GUIDs, so strict Plex absence checks fail; Malignant additionally reports Seerr Available (5) with no embedded requests. No candidate selected or executable plan approved. Target Radarr snapshots unchanged; no HTTP writes, monitoring/search/download/Plex/media.db/Trakt changes."
+  next_action: "Read-only identify the Movies item lacking canonical GUIDs and reconcile the Malignant availability conflict. Do not bypass guards or change metadata/cache without separate authorization. Once one candidate passes, review a fresh execute=false plan before separately authorizing exactly one live execution."
 
 my_cinema_seerr_isolation:
   status: "Verified PASS — no change necessary"
