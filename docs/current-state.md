@@ -1,5 +1,19 @@
 # Current State
 
+## Reacquisition runtime preparation — 2026-10-21
+
+**Verified:** accepted code deployed unchanged; existing Node 24.21.0 one-shot
+runtime and private persistent journal prepared. Exclusive locking and persistence
+across container restarts passed; the real operation journal is empty.
+
+**Blocked:** none of the three proposed candidates passed strict preflight.
+One Movies item lacks canonical TMDb/IMDb GUIDs, blocking absence verification;
+Malignant also reports Available in Seerr despite no Radarr file. No live mutation
+or acquisition occurred. Next: read-only identity/availability reconciliation,
+then a fresh dry plan and separate live authorization. Do not bypass safeguards.
+See the authoritative Media workstream state for retained evidence.
+
+
 ## My Cinema reacquisition v0.1 — component-tested — 2026-10-20
 
 The separate [reacquisition controller](../tools/movie-intelligence/REACQUIRE.md)
