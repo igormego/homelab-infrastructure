@@ -1,5 +1,17 @@
 # Roadmap
 
+## Plex identity corrected; reacquisition dry plan PASS — 2026-10-21
+
+Owner-authorized Match of the single unmatched Peaky Blinders movie restored
+TMDb/IMDb identity. Private snapshots verified preserved file availability,
+watched state/history, collections and other library item identities.
+Heretic and One Battle After Another now pass the unchanged preflight. Heretic's
+`execute=false` plan is ready; Radarr remains unmonitored/no-file and the durable
+operation journal is empty. Next: separate approval of one reviewed live execution.
+Malignant, archive placeholders and all acquisition settings remain untouched.
+The earlier blocked preparation checkpoint below is historical.
+
+
 ## Reacquisition runtime preparation — 2026-10-21
 
 **Verified:** accepted code deployed unchanged; existing Node 24.21.0 one-shot
