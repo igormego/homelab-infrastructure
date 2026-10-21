@@ -1,5 +1,9 @@
 # Movie Intelligence read-only control plane v0.1
 
+The separate [historical Watched archive operation](ARCHIVE.md) plans by TMDb ID
+and creates one synthetic presentation item only behind explicit execution.
+It does not mark Plex watched state or invoke acquisition.
+
 The separate [safe reacquisition operation](REACQUIRE.md) is component-tested for
 already-managed, unmonitored, no-file movies. It does not weaken the existing
 request controller's `already_managed` guard. No live reacquisition has occurred.
