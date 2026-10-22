@@ -44,6 +44,38 @@ be read by SQLite; no database schema, content or journal-mode writes are issued
 
 ## File and operation safety
 
+### Watched-state preservation
+
+An archive item need not be Plex Unwatched. It must not acquire fabricated history.
+`media.db` alone remains authoritative for lifetime watched eligibility.
+Supply a trusted `watch_reader` dependency; missing evidence returns `needs_review`.
+`PlexWatchEvidence` uses a query-only, read-only SQLite transaction to read precisely
+one canonical Plex movie GUID and local account. Its injected resolver must verify
+TMDb/IMDb -> Plex GUID and bind the API token's user to the local account; never
+guess a GUID, use title matching, or default to the owner. If no existing item can
+establish that binding, use an independently verified canonical resolver or stop.
+This version does not silently add cloud lookups or identity mapping.
+
+Planning fingerprints the complete watch evidence. Execution persists it before
+publication and revalidates it before publication and after indexing. Counts, last
+viewed time and exact event IDs/timestamps must remain identical, and the indexed
+item must match the baseline GUID and state. New/removed/changed events, account
+drift, absent provenance and unexplained counts return `needs_review`. A flag
+without corroborating history is conservatively unsupported, even if legitimate.
+No scrobble, watched mutation or playback endpoint is exposed. Concurrent user
+playback can require review; the verifier does not claim to attribute that event
+to the archive operation. This is a bounded observation, not a permanent guarantee.
+
+`reconcile_receipt(tmdb, execute=False)` verifies without Plex writes or scans.
+Execution only updates private state under an exclusive reconciliation lock after
+checking the expected receipt SHA. It retains the exact prior receipt in a
+hash-addressed history file and is idempotent. Legacy receipts without a baseline
+require explicit `approve_legacy=True`, an expected SHA and independently reviewed
+historical evidence; never automatically derive a prepublication baseline from a
+current watched flag. Heretic is the separately owner-approved legacy case.
+Keep the evidence bundle alongside the receipt. Old Zodiac artifacts are not
+adopted, rewritten or migrated by this operation.
+
 The deterministic path is `<archive-root>/<safe title> (<year>) {tmdb-<id>}/`
 with the same basename and `.mp4`. A stable private manifest is keyed by TMDb ID
 and records IMDb, title/year, library, exact paths, payload hash/size, stages and

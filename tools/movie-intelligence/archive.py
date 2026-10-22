@@ -17,6 +17,75 @@ class Blocked(Exception):
     pass
 
 
+class WatchReview(Blocked):
+    pass
+
+
+def watch_require(condition, reason):
+    if not condition:
+        raise WatchReview(reason)
+
+
+def validate_watch(evidence, identity):
+    watch_require(isinstance(evidence, dict) and evidence.get('complete') is True,
+                  'watch_provenance_incomplete')
+    watch_require(evidence.get('identity') == {k: identity[k] for k in ('tmdb', 'imdb')} and
+                  isinstance(evidence.get('scope'), str) and bool(evidence['scope']) and
+                  re.fullmatch(r'plex://movie/[a-zA-Z0-9]+', evidence.get('guid', '')),
+                  'watch_identity_or_account_ambiguous')
+    count, last, events = evidence.get('view_count'), evidence.get('last_viewed_at'), evidence.get('events')
+    watch_require(type(count) is int and count >= 0 and isinstance(events, list), 'watch_state_invalid')
+    watch_require((count == 0 and last is None) or (count > 0 and type(last) is int and last > 0),
+                  'watch_count_timestamp_conflict')
+    watch_require(all(isinstance(e, dict) and type(e.get('id')) is int and
+                      type(e.get('viewed_at')) is int and e['viewed_at'] > 0 for e in events) and
+                  len({e['id'] for e in events}) == len(events), 'watch_events_ambiguous')
+    # Conservative v0.1: watch flags with no corroborating history need review.
+    watch_require((count == 0 and not events) or
+                  (count == len(events) and last == max(e['viewed_at'] for e in events)),
+                  'watch_history_count_conflict')
+    watch_require(len(json.dumps(evidence)) <= 32768 and all(e['viewed_at'] <= time.time() for e in events),
+                  'watch_history_invalid_or_too_large')
+    return evidence
+
+
+class PlexWatchEvidence:
+    """Read-only local Plex evidence; resolver must verify external IDs and API account.
+
+    resolve(identity) returns (canonical Plex GUID, local account id, stable scope).
+    Never infer scope from a title or default to an account. Unavailable/ambiguous
+    schemas fail closed. No credentials, DB writes, cloud mutation or sync.
+    """
+    def __init__(self, db_path, resolve):
+        self.path, self.resolve = db_path, resolve
+
+    def __call__(self, identity):
+        try:
+            guid, account, scope = self.resolve(identity)
+            watch_require(type(account) is int and account > 0, 'watch_account_unknown')
+            db = sqlite3.connect(Path(self.path).resolve().as_uri() + '?mode=ro', uri=True)
+            db.row_factory = sqlite3.Row
+            try:
+                db.execute('PRAGMA query_only=ON'); db.execute('BEGIN')
+                watch_require(db.execute('SELECT count(*) FROM accounts WHERE id=?', (account,)).fetchone()[0] == 1,
+                              'watch_account_unknown')
+                rows = db.execute('SELECT view_count,last_viewed_at FROM metadata_item_settings WHERE guid=? AND account_id=?',
+                                  (guid, account)).fetchall()
+                watch_require(len(rows) <= 1, 'watch_state_ambiguous')
+                events = [dict(e) for e in db.execute('SELECT id,viewed_at,library_section_id,view_type FROM metadata_item_views WHERE guid=? AND account_id=? ORDER BY id LIMIT 10001',
+                                                    (guid, account))]
+                watch_require(len(events) <= 10000, 'watch_history_incomplete')
+                return validate_watch({'complete': True, 'identity': {k: identity[k] for k in ('tmdb', 'imdb')},
+                    'scope': scope, 'guid': guid, 'view_count': (rows[0]['view_count'] or 0) if rows else 0,
+                    'last_viewed_at': (rows[0]['last_viewed_at'] or None) if rows else None, 'events': events}, identity)
+            finally:
+                db.close()
+        except WatchReview:
+            raise
+        except Exception:
+            raise WatchReview('watch_provenance_unavailable') from None
+
+
 def require(condition, reason):
     if not condition:
         raise Blocked(reason)
@@ -115,9 +184,10 @@ def matching(rows, identity):
 
 
 class Archive:
-    def __init__(self, config, plex, radarr, seerr, identity_reader, renderer):
+    def __init__(self, config, plex, radarr, seerr, identity_reader, renderer, watch_reader=None):
         self.c, self.plex, self.radarr, self.seerr = config, plex, radarr, seerr
         self.identity_reader, self.renderer = identity_reader, renderer
+        self.watch_reader = watch_reader
         self.root, self.state = Path(config['host_root']), Path(config['state_root'])
         for p in (self.root, self.state):
             require(p.is_absolute() and p.is_dir() and not p.is_symlink() and p.resolve() == p, 'unsafe_directory')
@@ -149,6 +219,15 @@ class Archive:
 
     def receipt_path(self, tmdb):
         return self.state / f'{tmdb}.json'
+
+    def read_watch(self, identity):
+        watch_require(callable(self.watch_reader), 'watch_provenance_required')
+        try:
+            return validate_watch(self.watch_reader(identity), identity)
+        except WatchReview:
+            raise
+        except Exception:
+            raise WatchReview('watch_provenance_unavailable') from None
 
     def receipt(self, tmdb):
         p = self.receipt_path(tmdb)
@@ -210,7 +289,8 @@ class Archive:
             require(receipt['identity'] == identity and receipt['file'] == str(path), 'receipt_identity_changed')
         elif existing or path.parent.exists():
             raise Blocked('unowned_archive_conflict')
-        guard = {'identity': identity, 'radarr': managed, 'root': self.c['plex_root'], 'library': self.c['archive_id'], 'file': str(path)}
+        evidence = self.read_watch(identity)
+        guard = {'identity': identity, 'radarr': managed, 'root': self.c['plex_root'], 'library': self.c['archive_id'], 'file': str(path), 'watch_evidence': evidence}
         return guard, existing, receipt
 
     def verify(self, guard, existing, receipt):
@@ -225,11 +305,20 @@ class Archive:
         expected = self.c['plex_root'] + '/' + str(Path(guard['file']).relative_to(self.root)).replace(os.sep, '/')
         require(len(parts) == 1 and parts[0]['file'] == expected and parts[0].get('exists') is True and
                 parts[0].get('accessible') is True, 'indexed_file_mismatch')
-        require(not d.get('viewCount') and not d.get('lastViewedAt'), 'unexpected_playback_history')
+        baseline = validate_watch(receipt.get('watch_evidence'), guard['identity'])
+        watch_require(receipt.get('watch_baseline_origin') in ('prepublication', 'owner_reviewed_historical'),
+                      'watch_baseline_origin_unknown')
+        watch_require(all(e['viewed_at'] < receipt['created_at'] for e in baseline['events']),
+                      'watch_baseline_not_historical')
+        current = self.read_watch(guard['identity'])
+        watch_require(current == baseline, 'watch_state_or_events_changed')
+        watch_require(d.get('guid') == baseline['guid'] and (d.get('viewCount') or 0) == baseline['view_count'] and
+                      (d.get('lastViewedAt') or None) == baseline['last_viewed_at'], 'watch_metadata_conflict')
         thumb = d.get('thumb', '')
         require(thumb.startswith(f'/library/metadata/{d["ratingKey"]}/thumb/'), 'poster_missing')
         require(len(self.plex.bytes(thumb)) > 256, 'poster_unavailable')
-        return {'rating_key': d['ratingKey'], 'guids': ids, 'year': d['year'], 'poster': 'verified', 'file_bytes': Path(guard['file']).stat().st_size}
+        return {'rating_key': d['ratingKey'], 'guids': ids, 'year': d['year'], 'poster': 'verified', 'file_bytes': Path(guard['file']).stat().st_size,
+                'watch_state': 'preserved_historical' if baseline['view_count'] else 'preserved_unwatched'}
 
     def plan_archive_movie(self, tmdb):
         try:
@@ -241,6 +330,8 @@ class Archive:
                     'identity': guard['identity'], 'file': guard['file'], 'plan_fingerprint': digest(guard),
                     'operations': ['create one synthetic MP4', f'scan only library {self.c["archive_id"]} target folder', 'verify canonical metadata/poster'],
                     'preserve': ['Plex watched/history', 'Movies', 'Radarr', 'Seerr', 'media.db', 'Trakt', 'existing archive items']}
+        except WatchReview as e:
+            return {'decision': 'needs_review', 'reason': str(e), 'mutation_attempted': False}
         except Blocked as e:
             return {'decision': 'blocked', 'reason': str(e), 'mutation_attempted': False}
         except Exception:
@@ -260,6 +351,63 @@ class Archive:
         finally:
             os.close(fd)
 
+    def reconcile_receipt(self, tmdb, *, execute=False, expected_sha256=None,
+                          reviewed_historical=None, approve_legacy=False):
+        """Verify only; explicit execution updates private receipt, never Plex.
+
+        Legacy baseline adoption is an operator-approved migration, not an automatic
+        inference from today's watched flag. Caller retains corroborating evidence.
+        """
+        import fcntl
+        private_write_attempted = False
+        try:
+            require(type(execute) is bool and type(approve_legacy) is bool, 'explicit_boolean_required')
+            lock = self.state / f'{tmdb}.reconcile.lock'
+            fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600) if execute else None
+            try:
+                if fd is not None:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                guard, existing, receipt = self.inspect(tmdb)
+                require(receipt is not None, 'receipt_missing')
+                raw = self.receipt_path(tmdb).read_bytes(); old_hash = hashlib.sha256(raw).hexdigest()
+                candidate = dict(receipt)
+                if 'watch_evidence' not in receipt:
+                    watch_require(approve_legacy and expected_sha256 == old_hash and reviewed_historical is not None,
+                                  'legacy_watch_review_required')
+                    candidate.update(watch_evidence=validate_watch(reviewed_historical, guard['identity']),
+                                     watch_baseline_origin='owner_reviewed_historical')
+                verified = self.verify(guard, existing, candidate)
+                if receipt.get('stage') == 'verified' and receipt.get('verified') == verified:
+                    return {'decision': 'already_verified', 'mutation_attempted': False, 'verified': verified}
+                if not execute:
+                    return {'decision': 'verifiable', 'mutation_attempted': False, 'verified': verified,
+                            'receipt_sha256': old_hash}
+                require(expected_sha256 == old_hash, 'receipt_changed')
+                private_write_attempted = True
+                backup = self.state / f'{tmdb}.history-{old_hash}.json'
+                if backup.exists():
+                    require(not backup.is_symlink() and backup.read_bytes() == raw, 'receipt_history_conflict')
+                else:
+                    out = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                    with os.fdopen(out, 'wb') as f:
+                        f.write(raw); f.flush(); os.fsync(f.fileno())
+                # Detect external changes before committing the private reconciliation.
+                require(self.receipt_path(tmdb).read_bytes() == raw, 'receipt_changed')
+                verified = self.verify(guard, existing, candidate)
+                candidate.update(stage='verified', verified=verified, reconciled_at=time.time(),
+                                 previous_receipt_sha256=old_hash)
+                self.save(tmdb, candidate)
+                return {'decision': 'verified', 'mutation_attempted': True, 'verified': verified}
+            finally:
+                if fd is not None:
+                    os.close(fd)
+        except (Blocked, OSError) as e:
+            return {'decision': 'needs_review', 'reason': str(e) if isinstance(e, Blocked) else 'receipt_lock_or_io_error',
+                    'mutation_attempted': private_write_attempted}
+        except Exception:
+            return {'decision': 'needs_review', 'reason': 'receipt_reconciliation_uncertain',
+                    'mutation_attempted': private_write_attempted}
+
     def archive_movie(self, tmdb, *, execute=False, plan_fingerprint=None):
         if type(execute) is not bool:
             return {'decision': 'blocked', 'reason': 'explicit_boolean_required', 'mutation_attempted': False}
@@ -274,7 +422,8 @@ class Archive:
             require(plan_fingerprint == digest(guard), 'reviewed_plan_changed_or_missing')
             receipt = {'version': 1, 'identity': guard['identity'], 'file': guard['file'], 'library': self.c['archive_id'],
                        'stage': 'reserved', 'created_directory': str(Path(guard['file']).parent),
-                       'private_payload': str(self.state / f'{tmdb}.mp4'), 'created_at': time.time()}
+                       'private_payload': str(self.state / f'{tmdb}.mp4'), 'created_at': time.time(),
+                       'watch_evidence': guard['watch_evidence'], 'watch_baseline_origin': 'prepublication'}
             self.save(tmdb, receipt, exclusive=True)  # durable cross-process reservation, never auto-expired
             fresh, existing, _ = self.inspect(tmdb)
             require(fresh == guard and not existing, 'reserved_preflight_changed')
@@ -306,6 +455,8 @@ class Archive:
                         raise
                 time.sleep(self.c.get('poll_interval', 2))
             raise Blocked('indexing_pending_no_rescan')
+        except WatchReview as e:
+            return {'decision': 'needs_review', 'reason': str(e), 'mutation_attempted': attempted}
         except Blocked as e:
             return {'decision': 'needs_review' if attempted else 'blocked', 'reason': str(e), 'mutation_attempted': attempted}
         except Exception:

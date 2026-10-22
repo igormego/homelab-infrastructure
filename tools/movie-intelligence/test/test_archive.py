@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from archive import Archive, Blocked, ReadAPI, watched_identity, render_synthetic
+from archive import Archive, Blocked, ReadAPI, watched_identity, render_synthetic, PlexWatchEvidence
 
 
 class Fixture:
@@ -33,10 +33,14 @@ class Fixture:
         self.calls, self.render_count, self.scan_count = [], 0, 0
         self.fail_scan, self.index, self.on_render = False, True, None
         self.bad_metadata = False
+        self.watch = {'complete': True, 'identity': {'tmdb': 123, 'imdb': 'tt1234567'},
+                      'scope': 'fixture-owner', 'guid': 'plex://movie/fixture',
+                      'view_count': 0, 'last_viewed_at': None, 'events': []}
         self.controller = self.create()
 
     def create(self):
-        return Archive(self.config, self, self, self, lambda _: copy.deepcopy(self.identity), self.render)
+        return Archive(self.config, self, self, self, lambda _: copy.deepcopy(self.identity), self.render,
+                       lambda _: copy.deepcopy(self.watch))
 
     def render(self, identity):
         self.render_count += 1
@@ -73,6 +77,7 @@ class Fixture:
             if self.index:
                 folder = 'Fixture Movie (2024) {tmdb-123}'
                 self.archive = [{'ratingKey': '500', 'librarySectionID': 4, 'title': 'Fixture Movie', 'year': 2024,
+                                 'guid': self.watch['guid'], 'viewCount': self.watch['view_count'], 'lastViewedAt': self.watch['last_viewed_at'],
                                  'Guid': [{'id': 'tmdb://123'}, {'id': 'imdb://tt1234567'}],
                                  'thumb': '/library/metadata/500/thumb/1',
                                  'Media': [{'Part': [{'file': f'/archive/{folder}/{folder}.mp4', 'exists': True, 'accessible': True}]}]}]
@@ -276,6 +281,99 @@ class ArchiveTests(unittest.TestCase):
         db.execute("INSERT INTO external_ids VALUES(2,'imdb','tt1234567')"); db.commit()
         with self.assertRaises(Blocked): watched_identity(p, 123)
         db.close()
+
+    def historical(self):
+        self.h.watch.update(view_count=1, last_viewed_at=100,
+                            events=[{'id': 7, 'viewed_at': 100, 'library_section_id': 1, 'view_type': 0}])
+
+    def test_inherited_watched_preserved(self):
+        self.historical()
+        self.assertEqual(self.h.execute()['verified']['watch_state'], 'preserved_historical')
+        self.assertEqual(self.h.create().plan_archive_movie(123)['decision'], 'already_archived')
+
+    def test_unwatched_and_existing_zodiac_untouched(self):
+        zodiac = self.h.root / 'library' / 'Zodiac.mp4'; zodiac.write_bytes(b'existing Zodiac')
+        self.assertEqual(self.h.execute()['verified']['watch_state'], 'preserved_unwatched')
+        self.assertEqual(zodiac.read_bytes(), b'existing Zodiac')
+
+    def test_new_playback_event_needs_review(self):
+        self.historical(); self.h.execute()
+        self.h.watch['events'].append({'id': 8, 'viewed_at': 200, 'library_section_id': 4, 'view_type': 0})
+        self.h.watch.update(view_count=2, last_viewed_at=200)
+        self.assertEqual(self.h.controller.plan_archive_movie(123)['reason'], 'watch_state_or_events_changed')
+
+    def test_conflicting_metadata_count_and_timestamp(self):
+        self.historical(); self.h.execute()
+        for key, value in [('viewCount', 2), ('lastViewedAt', 101)]:
+            old = self.h.archive[0][key]; self.h.archive[0][key] = value
+            self.assertEqual(self.h.controller.plan_archive_movie(123)['reason'], 'watch_metadata_conflict')
+            self.h.archive[0][key] = old
+
+    def test_incomplete_or_ambiguous_provenance(self):
+        for key, value in [('complete', False), ('scope', ''), ('view_count', 1)]:
+            old = self.h.watch[key]; self.h.watch[key] = value
+            self.assertEqual(self.h.controller.plan_archive_movie(123)['decision'], 'needs_review')
+            self.h.watch[key] = old
+        self.h.controller.watch_reader = None
+        self.assertEqual(self.h.controller.plan_archive_movie(123)['reason'], 'watch_provenance_required')
+
+    def test_wrong_account_or_guid_needs_review(self):
+        self.historical(); self.h.execute()
+        for key, value in [('scope', 'other-account'), ('guid', 'plex://movie/other')]:
+            old = self.h.watch[key]; self.h.watch[key] = value
+            self.assertEqual(self.h.controller.plan_archive_movie(123)['decision'], 'needs_review')
+            self.h.watch[key] = old
+
+    def test_baseline_drift_before_publication_blocks(self):
+        def change(): self.h.watch['scope'] = 'other-account'
+        self.h.on_render = change
+        self.assertEqual(self.h.execute()['decision'], 'needs_review')
+        self.assertEqual(self.h.scan_count, 0)
+
+    def test_legacy_reconciliation_preserves_receipt_and_is_repeatable(self):
+        self.historical(); self.h.execute()
+        p = self.h.controller.receipt_path(123); receipt = json.loads(p.read_text())
+        receipt.pop('watch_evidence'); receipt.pop('watch_baseline_origin'); receipt['stage'] = 'scan_attempt'
+        p.write_text(json.dumps(receipt)); original = p.read_bytes(); sha = hashlib.sha256(original).hexdigest()
+        self.assertEqual(self.h.controller.reconcile_receipt(123)['decision'], 'needs_review')
+        args = {'expected_sha256': sha, 'reviewed_historical': copy.deepcopy(self.h.watch), 'approve_legacy': True}
+        self.assertEqual(self.h.controller.reconcile_receipt(123, **args)['decision'], 'verifiable')
+        self.assertEqual(p.read_bytes(), original)
+        self.assertEqual(self.h.controller.reconcile_receipt(123, execute=True, **args)['decision'], 'verified')
+        self.assertEqual((p.parent / f'123.history-{sha}.json').read_bytes(), original)
+        self.assertEqual(self.h.controller.reconcile_receipt(123, execute=True)['decision'], 'already_verified')
+        self.assertEqual((self.h.render_count,self.h.scan_count), (1,1))
+
+    def test_reconciliation_new_event_or_receipt_conflict_no_commit(self):
+        self.historical(); self.h.execute()
+        p=self.h.controller.receipt_path(123); raw=p.read_bytes()
+        self.h.watch['events'][0]['id']=999
+        self.assertEqual(self.h.controller.reconcile_receipt(123,execute=True)['decision'],'needs_review')
+        self.assertEqual(p.read_bytes(),raw)
+
+    def test_sqlite_evidence_scopes_account_and_guid_readonly(self):
+        p=self.h.root/'plex.db'; db=sqlite3.connect(p)
+        db.executescript('CREATE TABLE accounts(id INTEGER); CREATE TABLE metadata_item_settings(account_id INTEGER,guid TEXT,view_count INTEGER,last_viewed_at INTEGER); CREATE TABLE metadata_item_views(id INTEGER,account_id INTEGER,guid TEXT,viewed_at INTEGER,library_section_id INTEGER,view_type INTEGER); INSERT INTO accounts VALUES(1); INSERT INTO accounts VALUES(2);')
+        db.execute('INSERT INTO metadata_item_settings VALUES(?,?,?,?)',(2,self.h.watch['guid'],1,100))
+        db.commit(); db.close(); before=p.read_bytes()
+        reader=PlexWatchEvidence(str(p),lambda _: (self.h.watch['guid'],1,'fixture-owner'))
+        self.assertEqual(reader(self.h.identity),self.h.watch)
+        self.assertEqual(p.read_bytes(),before)
+
+    def test_evidence_failure_needs_review_without_private_details(self):
+        self.h.controller.watch_reader=lambda _: (_ for _ in ()).throw(ValueError('private detail'))
+        result=self.h.controller.plan_archive_movie(123)
+        self.assertEqual(result['decision'],'needs_review')
+        self.assertNotIn('private detail',json.dumps(result))
+
+    def test_reconcile_exclusive_lock(self):
+        import fcntl
+        self.h.execute()
+        with open(self.h.root/'state'/'123.reconcile.lock','w') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            result=self.h.controller.reconcile_receipt(123,execute=True)
+            self.assertEqual(result['decision'],'needs_review')
+        self.assertEqual(self.h.controller.reconcile_receipt(123)['decision'],'already_verified')
 
 
 if __name__ == '__main__':
