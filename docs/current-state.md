@@ -1,5 +1,22 @@
 # Current State
 
+## Historical archive renderer and Heretic pilot — 2026-10-22
+
+Renderer fix [PR #30](https://github.com/igormego/homelab-infrastructure/pull/30)
+is merged; 26 offline tests and actual 60-second H.264 rendering/ffprobe passed.
+The original pre-publication failure receipt was preserved with recovery evidence.
+One approved retry created exactly one Heretic placeholder in the isolated archive;
+identity, poster, metadata and file accessibility are verified. Existing Movies,
+Radarr, Zodiac, Seerr selection and media.db remained unchanged.
+
+Final acceptance is **blocked**: Plex attached a historical watched count/date to
+the new item, and the strict guard stopped with `unexpected_playback_history`.
+No watched/history write was issued. Do not retry or reset the item.
+Next: agree how retained Plex watched metadata should be treated; Samsung
+poster/details inspection is ready but not yet accepted. No bulk archive or
+automatic lifecycle is implemented. See the authoritative
+[Media state](../.project/workstreams/media-automation.yaml).
+
 ## Plex identity corrected; reacquisition dry plan PASS — 2026-10-21
 
 Owner-authorized Match of the single unmatched Peaky Blinders movie restored
