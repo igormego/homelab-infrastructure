@@ -93,13 +93,17 @@ posterizarr_assets_idea:
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
 my_cinema_historical_archive:
-  status: "Component-tested and deployed; first live pilot blocked before media creation"
+  status: "Renderer verified; Heretic created once; final acceptance blocked by inherited Plex watched metadata"
   verified_on: "2026-10-22"
-  implementation: "PR #29 merged as a3f32dca90ff980b71087bb5bc9a2760f2de3d42; 25 offline tests passed. Canonical watched identity, no playable/file conflicts, explicit fingerprint gate, exclusive private receipt, deterministic path, bounded archive-only scan and metadata/poster verification."
-  pilot: "Heretic fresh preflight eligible; renderer failed before MP4 publication or Plex scan. FFmpeg drawtext reports no valid Sans font in the existing Bazarr runtime. No placeholder or private MP4 payload exists; durable receipt remains reserved and prevents automatic retry."
-  preservation: "Before/after Movies listing, target Radarr record, Zodiac file and metadata, Seerr library selections and media.db/WAL hashes unchanged. Seerr does not report Heretic available. No Trakt calls, watched/history writes or acquisition operations."
-  rollback: "Private archive-v01 receipt and before/after/verification snapshots retained beside the existing isolated PoC private state. No Plex item or media file was created to roll back."
-  next_action: "Correct and component-test renderer font dependency using the existing placeholder approach; explicitly reconcile the proven pre-publication reservation before one controlled Heretic retry. No blind retry, bulk archive or lifecycle automation."
+  implementation: "PR #29 archive foundation; PR #30 renderer fix merged as 72dbd1b56728624cdc46196e3ce6ff2c6c9a9aa8. 26 offline tests passed. Actual isolated FFmpeg/ffprobe test passed: H.264/yuv420p 640x360, 60.000 seconds, no audio, 61193 bytes. Digest-pinned existing image, explicit hash-verified read-only font, no service modifications or packages."
+  recovery: "Original reserved receipt preserved in private recovery-before-publication-20261022/1138194.original.json with hashed failure evidence. Fresh inspection proved no original payload, publication or archive item; encoder_failed preceded scan stage. Original Movies, Radarr, media.db/WAL, Zodiac and Seerr configuration preserved; Seerr lastScan timestamps advanced independently."
+  pilot: "One fresh eligible Heretic plan, one retry, one exact-folder archive-library scan. Exactly one Heretic (2024) item exists: TMDb 1138194 / IMDb tt28015403. Poster fetched successfully, summary present; 61193-byte MP4 exists/access=true, duration 60000 ms, private/published hashes match."
+  acceptance_blocker: "New Plex item carries viewCount=1 and lastViewedAt=2026-07-12T20:15:13Z, predating placeholder creation. Controller returned needs_review/unexpected_playback_history and retained scan_attempt receipt. No scrobble, watched/history write or playback was issued; retained/synchronized Plex metadata is a hypothesis, not a confirmed source. No retry or correction performed."
+  preservation: "Before/after Movies listing, complete target Radarr record, Zodiac file/metadata, Seerr library selection and media.db/WAL hashes unchanged. Archive excluded and Heretic not Available in Seerr. No Trakt calls, acquisition/search/monitoring changes or existing media deletion."
+  rollback: "Exact published/private file paths and hashes retained in private archive-v01/1138194.json; original receipt, reconciliation evidence and retry snapshots retained. Keep placeholder and both receipts; no automatic rollback or second retry."
+  samsung: "Ready for manual poster/details inspection in Watched — Test; Heretic-specific Samsung acceptance pending. Server identity/media verified, strict unwatched acceptance not passed."
+  next_action: "Resolve policy for pre-existing Plex watched metadata restored on an archive item before changing any guard or watched state. Do not retry Heretic, bulk-import or automate lifecycle."
+
 
 my_cinema_reacquisition:
   status: "Runtime ready; first live read-only dry plan PASS; not live-write-accepted"
