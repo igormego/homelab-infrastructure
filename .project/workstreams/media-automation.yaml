@@ -92,6 +92,15 @@ posterizarr_assets_idea:
   concept: "Evaluate Posterizarr with Kometa local image assets as source-of-truth for chosen posters/backgrounds and later optional overlays; cache versus persistent assets and consistent collection/poster styling. May suit both Movies and archived Watched libraries."
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
+my_cinema_historical_archive:
+  status: "Component-tested and deployed; first live pilot blocked before media creation"
+  verified_on: "2026-10-22"
+  implementation: "PR #29 merged as a3f32dca90ff980b71087bb5bc9a2760f2de3d42; 25 offline tests passed. Canonical watched identity, no playable/file conflicts, explicit fingerprint gate, exclusive private receipt, deterministic path, bounded archive-only scan and metadata/poster verification."
+  pilot: "Heretic fresh preflight eligible; renderer failed before MP4 publication or Plex scan. FFmpeg drawtext reports no valid Sans font in the existing Bazarr runtime. No placeholder or private MP4 payload exists; durable receipt remains reserved and prevents automatic retry."
+  preservation: "Before/after Movies listing, target Radarr record, Zodiac file and metadata, Seerr library selections and media.db/WAL hashes unchanged. Seerr does not report Heretic available. No Trakt calls, watched/history writes or acquisition operations."
+  rollback: "Private archive-v01 receipt and before/after/verification snapshots retained beside the existing isolated PoC private state. No Plex item or media file was created to roll back."
+  next_action: "Correct and component-test renderer font dependency using the existing placeholder approach; explicitly reconcile the proven pre-publication reservation before one controlled Heretic retry. No blind retry, bulk archive or lifecycle automation."
+
 my_cinema_reacquisition:
   status: "Runtime ready; first live read-only dry plan PASS; not live-write-accepted"
   verified_on: "2026-10-21"
