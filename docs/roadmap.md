@@ -9,12 +9,16 @@ One approved retry created exactly one Heretic placeholder in the isolated archi
 identity, poster, metadata and file accessibility are verified. Existing Movies,
 Radarr, Zodiac, Seerr selection and media.db remained unchanged.
 
-Final acceptance is **blocked**: Plex attached a historical watched count/date to
-the new item, and the strict guard stopped with `unexpected_playback_history`.
-No watched/history write was issued. Do not retry or reset the item.
-Next: agree how retained Plex watched metadata should be treated; Samsung
-poster/details inspection is ready but not yet accepted. No bulk archive or
-automatic lifecycle is implemented. See the authoritative
+**Server acceptance PASS:** [PR #31](https://github.com/igormego/homelab-infrastructure/pull/31)
+replaces the blanket Unwatched guard with canonical identity/account-scoped
+history preservation; 38 offline tests passed. Heretic's inherited watched count
+and timestamp match the historical Movies event. The existing item was verified
+read-only and only its private receipt was reconciled, retaining the original
+receipt and all failure/recovery evidence. Repeated verification is idempotent.
+No scan, playback, media regeneration or watched-state mutation occurred.
+
+Next: Heretic Samsung poster/details confirmation. No bulk archive, retry or
+automatic lifecycle is authorized. See the authoritative
 [Media state](../.project/workstreams/media-automation.yaml).
 
 ## Plex identity corrected; reacquisition dry plan PASS — 2026-10-21
