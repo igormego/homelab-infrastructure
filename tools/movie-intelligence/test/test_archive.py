@@ -1,4 +1,5 @@
 import copy
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -234,13 +235,35 @@ class ArchiveTests(unittest.TestCase):
         with self.assertRaises(Blocked): ReadAPI('http://user:secret@example.invalid', 'key')
 
     def test_renderer_args_and_probe(self):
-        probe = {'streams': [{'codec_name': 'h264', 'pix_fmt': 'yuv420p'}], 'format': {'duration': '60'}}
+        font = self.h.root / 'font.ttf'; font.write_bytes(b'verified font')
+        probe = {'streams': [{'codec_name': 'h264', 'pix_fmt': 'yuv420p', 'width': 640, 'height': 360}], 'format': {'duration': '60'}}
         replies = [subprocess.CompletedProcess([], 0, b'1234ftyp' + b'x' * 2048, b''), subprocess.CompletedProcess([], 0, json.dumps(probe).encode(), b'')]
-        with patch('archive.subprocess.run', side_effect=replies) as run:
-            render_synthetic({'title': "Film'; evil", 'year': 2024})
+        def reply(args, **kwargs):
+            if '/usr/bin/ffmpeg' in args:
+                mount = next(a for a in args if a.endswith('target=/render'))
+                directory = mount.split('source=')[1].split(',')[0]
+                (Path(directory) / 'placeholder.mp4').write_bytes(replies[0].stdout)
+            return replies.pop(0)
+        with patch('archive.subprocess.run', side_effect=reply) as run:
+            render_synthetic({'title': "Film'; evil", 'year': 2024}, fontfile=str(font), font_sha256=hashlib.sha256(font.read_bytes()).hexdigest())
             args = run.call_args_list[0].args[0]
-            self.assertIn('pipe:1', args); self.assertIn('ARCHIVE PLACEHOLDER', args[args.index('-vf') + 1])
+            self.assertIn('+faststart', args); self.assertIn('ARCHIVE PLACEHOLDER', args[args.index('-vf') + 1])
             self.assertFalse(run.call_args_list[0].kwargs.get('shell', False))
+            self.assertIn('fontfile=/archive-font.ttf', args[args.index('-vf') + 1])
+            for flag in ['--pull=never', '--network=none', '--read-only', '--cap-drop=ALL']:
+                self.assertIn(flag, args)
+            self.assertNotIn('exec', args)
+            self.assertTrue(any('@sha256:' in a for a in args))
+
+    def test_renderer_missing_or_changed_font_never_launches(self):
+        font = self.h.root / 'font.ttf'
+        with patch('archive.subprocess.run') as run:
+            with self.assertRaisesRegex(Blocked, 'invalid_renderer_font'):
+                render_synthetic({'title': 'Film', 'year': 2024}, fontfile=str(font))
+            font.write_bytes(b'wrong font')
+            with self.assertRaisesRegex(Blocked, 'renderer_font_hash_mismatch'):
+                render_synthetic({'title': 'Film', 'year': 2024}, fontfile=str(font))
+            run.assert_not_called()
 
     def test_database_reader_provenance_and_ambiguity(self):
         p = self.h.root / 'fixture.db'

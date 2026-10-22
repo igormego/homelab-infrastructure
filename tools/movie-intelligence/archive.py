@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath
 import re
 import sqlite3
 import subprocess
+import tempfile
 import time
 import unicodedata
 import urllib.parse
@@ -311,23 +312,46 @@ class Archive:
             return {'decision': 'needs_review' if attempted else 'blocked', 'reason': 'operation_or_receipt_uncertain_no_retry', 'mutation_attempted': attempted}
 
 
-def render_synthetic(identity):
-    """Use an existing FFmpeg in Bazarr only as a bounded encoder, not its API/service."""
+RENDER_IMAGE = 'lscr.io/linuxserver/bazarr@sha256:762f802274598da27255b2e5778f262b2b71b355a23e3812d9ee1520f8dbe37c'
+RENDER_FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+RENDER_FONT_SHA256 = 'b4c632e3cdf9acc7f28758fb5a323c8524d7fc6660d46904d9b6cbe2809c419c'
+
+
+def render_synthetic(identity, *, fontfile=RENDER_FONT, font_sha256=RENDER_FONT_SHA256):
+    """Pinned, networkless one-shot tools; never exec into or modify a service."""
+    font = Path(fontfile)
+    require(font.is_absolute() and font.is_file() and not font.is_symlink() and
+            font.resolve() == font and ',' not in str(font), 'invalid_renderer_font')
+    require(hashlib.sha256(font.read_bytes()).hexdigest() == font_sha256, 'renderer_font_hash_mismatch')
+    base = ['docker', 'run', '--rm', '--pull=never', '--network=none', '--read-only',
+            '--cap-drop=ALL', '--security-opt=no-new-privileges', '--pids-limit=128',
+            '--memory=256m', '--cpus=1', '--user', f'{os.getuid()}:{os.getgid()}']
     label = unicodedata.normalize('NFKD', identity['title']).encode('ascii', 'ignore').decode()
     label = re.sub('[^A-Za-z0-9 ]', '', label).upper()[:45] + ' ' + str(identity['year'])
-    filters = ','.join(f"drawtext=text='{text}':fontcolor=white:fontsize={size}:x=(w-text_w)/2:y={y}"
+    filters = ','.join(f"drawtext=fontfile=/archive-font.ttf:text='{text}':fontcolor=white:fontsize={size}:x=(w-text_w)/2:y={y}"
                        for text, size, y in [('ARCHIVE PLACEHOLDER', 30, 90), ('NOT THE ACTUAL FILM', 24, 145), (label, 20, 210)])
-    cmd = ['docker', 'exec', 'bazarr', '/usr/bin/ffmpeg', '-hide_banner', '-loglevel', 'error',
+    cmd = base + ['--mount', f'type=bind,source={font},target=/archive-font.ttf,readonly',
+           '--entrypoint', '/usr/bin/ffmpeg', RENDER_IMAGE, '-hide_banner', '-loglevel', 'error',
            '-f', 'lavfi', '-i', 'color=c=0x17212b:s=640x360:r=24', '-vf', filters, '-t', '60', '-an',
            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '35', '-pix_fmt', 'yuv420p',
-           '-movflags', 'frag_keyframe+empty_moov', '-f', 'mp4', 'pipe:1']
-    r = subprocess.run(cmd, capture_output=True, timeout=45)
-    require(r.returncode == 0 and len(r.stdout) <= 2 * 1024 * 1024, 'encoder_failed')
-    probe = subprocess.run(['docker', 'exec', '-i', 'bazarr', '/usr/bin/ffprobe', '-v', 'error',
-                            '-show_streams', '-show_format', '-of', 'json', 'pipe:0'], input=r.stdout,
-                           capture_output=True, timeout=15)
+           '-movflags', '+faststart', '-f', 'mp4', '/render/placeholder.mp4']
+    # A seekable file produces an ordinary MP4 with complete duration/index metadata.
+    # Streaming fragmented MP4 probing can report only the first fragment duration.
+    with tempfile.TemporaryDirectory(prefix='archive-render-') as directory:
+        output = Path(directory) / 'placeholder.mp4'
+        mount = f'type=bind,source={directory},target=/render'
+        cmd[2:2] = ['--mount', mount]
+        r = subprocess.run(cmd, capture_output=True, timeout=45)
+        require(r.returncode == 0 and output.is_file() and not output.is_symlink() and
+                1024 < output.stat().st_size <= 2 * 1024 * 1024, 'encoder_failed')
+        probe = subprocess.run(base + ['--mount', mount + ',readonly', '--entrypoint',
+                               '/usr/bin/ffprobe', RENDER_IMAGE, '-v', 'error', '-show_streams',
+                               '-show_format', '-of', 'json', '/render/placeholder.mp4'],
+                               capture_output=True, timeout=15)
+        data = output.read_bytes()
     require(probe.returncode == 0, 'synthetic_probe_failed')
     info = json.loads(probe.stdout); streams = info['streams']
     require(len(streams) == 1 and streams[0]['codec_name'] == 'h264' and streams[0]['pix_fmt'] == 'yuv420p' and
+            streams[0].get('width') == 640 and streams[0].get('height') == 360 and
             59 <= float(info['format']['duration']) <= 61, 'synthetic_format_invalid')
-    return r.stdout
+    return data

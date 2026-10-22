@@ -50,13 +50,30 @@ and records IMDb, title/year, library, exact paths, payload hash/size, stages an
 verified Plex ratingKey. Title/path drift requires review, not a second item.
 
 Execution exclusively creates a durable manifest before work. It refreshes
-eligibility inside the reservation and immediately before publishing. An existing
-FFmpeg/ffprobe in the Bazarr container is used solely as a bounded local encoder:
+eligibility inside the reservation and immediately before publishing. FFmpeg/ffprobe
+run in disposable containers from the existing digest-pinned Bazarr image, with
+no network, read-only filesystem, dropped capabilities and bounded resources.
+They never execute inside the running Bazarr service. The existing host DejaVu Sans
+font is hash-verified and mounted read-only at an explicit `fontfile` path; missing
+or changed fonts fail closed. No implicit font discovery or image pull is used:
 60-second 640x360 H.264/yuv420p, no audio, with visible `ARCHIVE PLACEHOLDER`,
 `NOT THE ACTUAL FILM` and movie title/year. No copyrighted footage or service API
 is used. No software installation or service change is required.
 
-The renderer returns a validated, at-most-2-MiB MP4 in memory. It is persisted in
+Before live execution, run `render_synthetic` with the actual host Docker runtime.
+The returned MP4 must pass ffprobe, including dimensions, codec, no audio and
+duration. Offline mocks alone do not establish renderer runtime acceptance.
+Do not retry a reserved operation automatically. A pre-publication recovery needs
+explicit inspection of the receipt, both file paths, archive metadata and retained
+failure snapshots. Preserve the original receipt and evidence under a new private
+recovery directory before freeing this one identity for a fresh reviewed plan.
+Any uncertain publication or scan outcome blocks recovery.
+
+The encoder writes an ordinary `+faststart` MP4 into a private temporary directory,
+then ffprobe reads the seekable file. This avoids first-fragment-only duration
+reporting from fragmented MP4 over a pipe. The directory is not a Plex media root
+and is removed after validation. The renderer returns a validated, at-most-2-MiB MP4
+in memory. It is persisted in
 the private directory, then atomically hardlinked into the archive using exclusive
 directory/link creation. State and archive must share a filesystem. Never overwrite
 or adopt a pre-existing directory/file. A changed hash, symlink, scope or identity
