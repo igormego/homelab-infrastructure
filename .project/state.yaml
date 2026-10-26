@@ -7,42 +7,45 @@ project:
   owner: "Core Project Brain rollup"
 
 status: "active"
-phase: "post-migration-operations-and-media-automation"
+phase: "post-migration-media-intelligence-and-my-cinema"
 
 current_gate: >
-  The desktop migration is formally closed. Current project work is split across
-  two independent verified gates: Media Automation is observing the accepted
-  Kometa Phase 2A rotation and must classify the saved Mortgully Trakt POST audit
-  without retrying the ambiguous delivery; Infrastructure & Agent Control Plane
-  has a read-only 39-entry history proposal that requires separate authorization
-  before any write. Neither gate reopens migration closure.
+  Desktop migration remains formally closed. The freshest Media Automation work
+  is now My Cinema / historical-library behavior: the Heretic archive pilot is
+  server-accepted with valid inherited historical watch state preserved, while
+  Samsung poster/details confirmation remains pending. Reacquisition is
+  component-tested and runtime-ready for dry planning but is not live-write
+  accepted. Separately, the Mortgully Trakt delivery remains durably ambiguous
+  and must not be retried automatically. Infrastructure still has a read-only
+  39-entry history proposal that requires separate authorization before any write.
 
 current_state: >
-  The dedicated desktop is the production Homelab and the notebook-to-desktop
-  migration is accepted as closed. Media Automation has accepted Plex/ARR/Usenet
-  operation, public-indexer torrent cleanup, Tautulli/ledger foundations and
-  Kometa Phase 2A Movies discovery; its remaining hard blocker is the single
-  ambiguous Mortgully Trakt delivery, where exactly one POST was attempted and
-  automatic retry is forbidden pending audit classification. Infrastructure &
-  Agent Control Plane has stable identity for 40 movie-history candidates and a
-  read-only preflight proposing 39 safe history entries while excluding one
-  unresolved Plex link; no history writes are authorized. Post-migration
-  infrastructure cleanup such as rollback-disk retirement, image policy,
-  backup/restore hardening and monitoring remains follow-up work rather than a
-  migration blocker.
+  The desktop is the production Homelab. Core media foundations are accepted:
+  Plex/ARR/Usenet operation, public-indexer torrent cleanup, Tautulli/ledger
+  foundations, Kometa Phase 2A scheduled rotation and the Movie Intelligence
+  layer. Media Automation has additionally built and verified the first reversible
+  My Cinema historical archive path: one Heretic placeholder is present in the
+  isolated archive library, correct identity/poster/metadata/file accessibility
+  are verified, inherited watched metadata was matched to a pre-existing
+  canonical Plex history event, and no watched-state mutation was performed.
+  Reacquisition has a bounded dry-run controller with durable receipts and an
+  explicit execute gate, but no user-facing trigger or live reacquisition write
+  has been accepted. The Walter Mitty Samsung buffering issue remains unresolved
+  and is isolated from the separately accepted Radarr audio compatibility policy.
+  Infrastructure / Agent Control Plane remains independently at the 39-entry
+  read-only history proposal boundary.
 
 exact_next_action: >
-  Perform no history write. Media Automation should observe the next scheduled
-  daily/Thursday Kometa rotation and inspect only the sanitized original
-  Mortgully POST response/audit, keeping the delivery ambiguous unless that
-  evidence definitively proves no event was created. Infrastructure may present
-  its 39-entry read-only history proposal for a separately authorized batch, but
-  must not execute it under the current gate.
+  Media Automation should obtain only the pending Heretic Samsung poster/details
+  confirmation and keep live reacquisition execution paused. Do not retry the
+  ambiguous Mortgully Trakt delivery. Infrastructure may present, but not execute,
+  its 39-entry history proposal unless separately authorized.
 
 blockers:
-  - "Mortgully Trakt delivery remains durably ambiguous after exactly one POST; automatic retry is forbidden pending audit classification."
-  - "Safe programmable Plex historical watched-date writes remain unconfirmed."
-  - "The 39-entry history proposal requires separate explicit authorization before any write."
+  - "Mortgully Trakt delivery remains durably ambiguous after exactly one POST; automatic retry is forbidden."
+  - "My Cinema reacquisition has no accepted live-write path or deployed user-facing trigger yet."
+  - "The 39-entry infrastructure history proposal requires separate explicit authorization before any write."
+  - "Walter Mitty Samsung buffering root cause remains unknown; do not treat the accepted Radarr audio policy as a playback fix."
 
 workstreams:
   - id: "infrastructure"
@@ -61,17 +64,16 @@ rollup_policy:
 portfolio:
   milestone: true
   signal: >
-    The Homelab story has moved beyond migration into a durable self-hosted
-    automation/control platform: the desktop migration is closed, media workflows
-    and bounded Kometa discovery are accepted, Movie Intelligence and scheduled
-    ingestion are operational, and current write boundaries preserve explicit
-    authorization and ambiguity rather than hiding uncertain outcomes.
+    Homelab has progressed from migration into a bounded personal media platform:
+    durable Movie Intelligence, scheduled media automation, accepted Kometa
+    discovery, guarded request/reacquisition controls and a reversible historical
+    archive path that preserves provenance and refuses uncertain writes.
 
 verification:
-  last_verified: "2026-10-14"
+  last_verified: "2026-10-22"
   sources:
     - ".project/workstreams/infrastructure.yaml (last verified 2026-10-05)"
-    - ".project/workstreams/media-automation.yaml (last verified 2026-10-14)"
+    - ".project/workstreams/media-automation.yaml (contains verified Media milestones through 2026-10-22; its top-level verification metadata still says 2026-10-19 and should be refreshed by the specialist owner)"
 
 sync:
   status: "synced"
