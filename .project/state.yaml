@@ -47,6 +47,34 @@ blockers:
   - "The 39-entry infrastructure history proposal requires separate explicit authorization before any write."
   - "Walter Mitty Samsung buffering root cause remains unknown; do not treat the accepted Radarr audio policy as a playback fix."
 
+dependencies:
+  - component: "Plex / Movie Intelligence identity and historical watch evidence"
+    dependency: >
+      My Cinema archive and reacquisition depend on canonical TMDb/IMDb matching,
+      scoped Plex watched provenance, media.db as the owned historical state and
+      the existing Media Automation policy. Ambiguous identity or history must not
+      be replaced with invented matches or watched events.
+  - component: "Media Automation / Trakt delivery controls"
+    dependency: >
+      The original Mortgully history POST remains ambiguous after one attempt.
+      Any later delivery decision depends on classifying its original sanitized
+      audit; no automatic retry is authorized.
+  - component: "Infrastructure historical cohort approval"
+    dependency: >
+      The Infrastructure workstream has 39 read-only history proposals out of
+      40 qualified candidates, with one unresolved Plex link excluded. Separate
+      explicit authorization and a fresh pre-write check are prerequisites to
+      any later history batch.
+
+important_open_loops:
+  - "Obtain Heretic Samsung poster/details confirmation; server acceptance alone does not prove client UX acceptance."
+  - "Keep My Cinema reacquisition dry-run-only until a separately accepted live write and normal user-facing request trigger exist."
+  - "Inspect only the original Mortgully Trakt POST audit and preserve ambiguous/no-retry state unless definitive non-creation evidence is obtained."
+  - "Present the Infrastructure 39-entry history proposal for separate authorization; keep the one unresolved Plex-link item excluded and do not execute the batch implicitly."
+  - "Walter Mitty Samsung buffering remains unexplained; the separately accepted Radarr audio policy is not a playback fix."
+  - "Continue post-migration backup/restore, monitoring, image-policy and rollback-disk housekeeping as follow-up operations, not migration blockers."
+  - "Media workstream verification metadata still shows 2026-10-19 despite newer 2026-10-22 evidence; let the specialist owner reconcile it without inventing freshness."
+
 workstreams:
   - id: "infrastructure"
     path: ".project/workstreams/infrastructure.yaml"
