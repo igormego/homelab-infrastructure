@@ -76,6 +76,74 @@ test('duplicate stable IDs and duplicate one-source titles remain ambiguous', as
   assert.equal((await check({ tmdb_id: 111 }, adapters([a, { ...a, id: 2 }]))).summary.state, 'ambiguous');
 });
 
+test('duplicate requested TMDb IDs in either source stay ambiguous despite a unique peer', async () => {
+  const personal = id => mi({ id, title: 'Personal title', tmdb_id: 111, watched: true });
+  const library = id => rad({ id, title: 'Library title', tmdbId: 111, hasFile: true });
+  for (const [a, b] of [
+    [[personal(2), personal(1)], [library(3)]],
+    [[personal(3)], [library(2), library(1)]],
+  ]) {
+    const r = await check({ tmdb_id: 111 }, adapters(a, b));
+    assert.deepEqual(r.summary, { state: 'ambiguous', reason: 'multiple_candidates', matched_by: null });
+    assert.deepEqual(r.identity, { external_ids: null, enrichment: { status: 'not_requested' } });
+    assert.deepEqual(r.sources.movie_intelligence.candidates, [...a].sort((x, y) => x.id - y.id));
+    assert.deepEqual(r.sources.radarr.candidates, [...b].sort((x, y) => x.id - y.id));
+  }
+});
+
+test('a shared stable ID cannot enrich identities with a conflicting non-null stable ID', async () => {
+  for (const [personalIds, libraryIds] of [
+    [{ tmdb_id: 111, imdb_id: 'tt0086250' }, { tmdbId: 111, imdbId: 'tt0023427' }],
+    [{ imdb_id: 'tt0086250', tmdb_id: 111 }, { imdbId: 'tt0086250', tmdbId: 877 }],
+    [{ tmdb_id: 111, csfd_id: 900001 }, { tmdbId: 111, csfd_id: 900002 }],
+  ]) {
+    const a = mi({ id: 1, title: 'Movie', ...personalIds });
+    const b = rad(libraryIds);
+    // Title discovery exercises cross-source reconciliation without a query-ID conflict.
+    const r = await check({ title: 'Movie' }, adapters([a], [b]));
+    assert.deepEqual(r.summary, { state: 'unresolved', reason: 'source_identity_conflict', matched_by: null });
+    assert.deepEqual(r.identity, { external_ids: null, enrichment: { status: 'not_requested' } });
+    assert.deepEqual(r.sources.movie_intelligence.candidates, [a]);
+    assert.deepEqual(r.sources.radarr.candidates, [b]);
+  }
+});
+
+test('rejected adapter Promises preserve peer evidence and sanitize source errors', async () => {
+  const rawError = 'private-adapter-error-sentinel';
+  const a = mi({ id: 1, title: 'Movie', tmdb_id: 111, watched: true });
+  const b = rad({ tmdbId: 111, hasFile: true });
+  for (const failed of ['movie_intelligence', 'radarr']) {
+    const injected = adapters([a], [b]);
+    injected[failed === 'radarr' ? 'radarr' : 'movieIntelligence'] = () => Promise.reject(new Error(rawError));
+    const r = await check({ tmdb_id: 111 }, injected);
+    assert.deepEqual(r.summary, { state: 'unresolved', reason: 'source_unavailable', matched_by: null });
+    assert.deepEqual(r.sources[failed], { status: 'error', error: `${failed}_unavailable`, candidates: [] });
+    const peer = failed === 'radarr' ? 'movie_intelligence' : 'radarr';
+    assert.deepEqual(r.sources[peer], { status: 'ok', error: null, candidates: [failed === 'radarr' ? a : b] });
+    assert.deepEqual(r.identity, { external_ids: null, enrichment: { status: 'not_requested' } });
+    assert.ok(!JSON.stringify(r).includes(rawError));
+  }
+});
+
+test('non-array adapter results are unavailable rather than empty or confirmed', async () => {
+  const rawData = 'private-malformed-data-sentinel';
+  const a = mi({ id: 1, title: 'Movie', tmdb_id: 111, watchlist: true });
+  const b = rad({ tmdbId: 111, monitored: true });
+  for (const malformed of [null, undefined, rawData, { error: rawData, records: [a] }]) {
+    for (const failed of ['movie_intelligence', 'radarr']) {
+      const injected = adapters([a], [b]);
+      injected[failed === 'radarr' ? 'radarr' : 'movieIntelligence'] = async () => malformed;
+      const r = await check({ tmdb_id: 111 }, injected);
+      assert.deepEqual(r.summary, { state: 'unresolved', reason: 'source_unavailable', matched_by: null });
+      assert.deepEqual(r.sources[failed], { status: 'error', error: `${failed}_unavailable`, candidates: [] });
+      const peer = failed === 'radarr' ? 'movie_intelligence' : 'radarr';
+      assert.deepEqual(r.sources[peer], { status: 'ok', error: null, candidates: [failed === 'radarr' ? a : b] });
+      assert.deepEqual(r.identity, { external_ids: null, enrichment: { status: 'not_requested' } });
+      assert.ok(!JSON.stringify(r).includes(rawData));
+    }
+  }
+});
+
 test('ID query never substitutes a different title match', async () => {
   assert.equal((await check({ tmdb_id: 999999, title: 'Scarface' })).summary.state, 'not_found');
 });
