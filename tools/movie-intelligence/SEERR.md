@@ -2,6 +2,36 @@
 
 **Live-write-accepted for the owner-approved Whiplash pilot on 2026-09-27 (Issue #16); completed import/Plex visibility verified read-only under Issue #17.** Issue #14 adds a separate Act boundary to the live-accepted Observe module. No real Seerr request was sent during implementation. Node 24.14+ is required, with no new dependencies. Run the complete offline suite with `node --test test/*.test.mjs` from this directory.
 
+## Assistant read-only planning entry point (source-only; not deployed)
+
+`plan-cli.mjs` is a separate fixed-command entry point for the **existing**
+`createMovieRequestController(...).plan_movie_request` method. It never calls
+`request_movie`, cannot accept `--execute`, and has no mutation mode or arbitrary
+URL, method, profile, root or credentials CLI options.
+
+With the same private, trusted configuration as the existing Movie Intelligence
+`request-cli.mjs` (Node >=24.14, normalized read-only SQLite, existing Seerr and
+Radarr READ dependencies), it accepts only:
+
+```sh
+node plan-cli.mjs --tmdb-id 900001
+node plan-cli.mjs --title 'Synthetic Movie' --year 2020
+```
+
+It outputs one bounded JSON plan with decision/reason, stable identity, source
+status/count evidence and `mutation_attempted:false`; no raw private records,
+paths, API keys or suggested HTTP POST payload. Invalid selector or missing
+arguments emits only a fixed blocked error. Missing credentials/source
+availability yields an unresolved non-executing plan. This CLI does not create
+requests, downloads or monitoring actions. It is not yet connected to the live
+Personal Assistant control registry. The deployment plan must independently
+verify trusted code pinning, runtime isolation, credentials and read-only mounts.
+
+Related Assistant [Issue #38](https://github.com/igormego/personal-ai-brain/issues/38).
+A later explicit write-capability implementation must maintain durable
+per-movie uncertainty receipts across restarts; these do not exist in this
+read-only CLI.
+
 ## Interface and configuration
 
 `createMovieRequestController({ seerr, movieIntelligence, radarr })` returns only:
