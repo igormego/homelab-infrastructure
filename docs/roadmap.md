@@ -1,5 +1,13 @@
 # Roadmap
 
+## Personal AI Brain control durability — 2026-10-27
+
+**Completed:** stable immutable control image/Compose pin and controlled service
+restart/recovery, with ledger, permissions and rollback preserved.
+See the authoritative [deployment runbook](https://github.com/igormego/personal-ai-brain/blob/main/docs/control-deployment-issue34.md).
+Whole-host reboot and Gateway adapter acceptance remain separate gates;
+no media or Windows-worker deployment is implied.
+
 ## Historical archive renderer and Heretic pilot — 2026-10-22
 
 Renderer fix [PR #30](https://github.com/igormego/homelab-infrastructure/pull/30)
