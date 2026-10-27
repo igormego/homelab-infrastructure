@@ -1,5 +1,15 @@
 # Current State
 
+## Personal AI Brain control durability — 2026-10-27
+
+**Verified:** the existing control worker now uses a stable Compose configuration
+and immutable image pin. Controlled restart/recovery passed: original 73 audit
+records and credential metadata preserved; 15 unrelated containers unchanged;
+queued read-only requests completed once and replay/conflict caused no execution.
+The guarded fallback remains available. Windows workers were not changed.
+See the authoritative [deployment and rollback runbook](https://github.com/igormego/personal-ai-brain/blob/main/docs/control-deployment-issue34.md)
+and [Issue #34 evidence](https://github.com/igormego/personal-ai-brain/issues/34#issuecomment-6453447032).
+
 ## Historical archive renderer and Heretic pilot — 2026-10-22
 
 Renderer fix [PR #30](https://github.com/igormego/homelab-infrastructure/pull/30)
