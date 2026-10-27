@@ -62,7 +62,8 @@ function boundedPlan(result) {
       (m.year !== null && (!Number.isInteger(m.year) || m.year < 1888 || m.year > 2100)))) {
     return reject('source_unavailable');
   }
-  if (result.decision === 'requestable' && m === null) return reject('source_unavailable');
+  if (result.decision === 'requestable' && (m === null || result.evidence === null ||
+      result.reason !== 'stable_identity_and_clear_preflight')) return reject('source_unavailable');
   const e = result.evidence;
   let evidence = null;
   if (e !== null) {
