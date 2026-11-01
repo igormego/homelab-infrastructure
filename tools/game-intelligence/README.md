@@ -36,12 +36,31 @@ python3 game_db.py --db ./games.db --csv /path/to/backloggd.csv
 
 The public HTML reader fetches **four status tabs** (played, playing, backlog and wishlist), follows `?page=N` pagination, uses Backloggd card IDs for identity, and converts its displayed 0–10 `data-rating` value to 0–5 stars. It enforces bounded responses, a request pause, and fail-closed behavior on fetching errors, duplicate pages and invalid identities. Public page shape and the current 40-card page size are undocumented and can change.
 
+## Personal playthroughs (v0.2)
+
+Historically played titles have no trustworthy hours or completion dates. **Do not assume zero playtime, infer a year, or fill missing data.** The owner started detailed Backloggd logging in 2026; earlier games retain their ratings and played status with unknown playtime/date. Even after 2026, absent values remain SQL `NULL`. An explicit playthrough is different from the public game's *community average* hours.
+
+The optional journal importer works with the **existing**, private `games.db` and a privately transferred `journal.csv`, with the required CSV fields `Backloggd ID,Title,Finished On,Platform,Playtime Minutes,State,Session Key` (optional `Started On`). Each row is one logged session. The key is a source-specific deterministic identifier for that session, not a claim that Backloggd provides an API ID.
+
+```bash
+# On a host with the journal CSV and existing private games.db:
+python3 journal_import.py --db /path/to/games.db --journal-csv /tmp/journal.csv --dry-run
+# After taking a backup of the original database:
+python3 journal_import.py --db /path/to/games.db --journal-csv /tmp/journal.csv
+```
+
+The first step validates identities without changing the DB. The write step is transactional and idempotent: it creates `playthroughs` and an empty `game_metadata` table if absent; records exact supplied platform, optional played minutes, optional start/finish dates, and session state. Session key uniqueness prevents duplicate imports. A wrong game ID/title or invalid date fails closed. The migration does not alter `games`, `user_games`, ratings, or the existing 145-game library. The `game_metadata` table is **schema only** until a separately validated Backloggd details importer is implemented; IGDB integration is not required for this milestone.
+
+Only explicit logged sessions are counted in playtime-based analytics. Queries over the historic library should separately state the completeness of logged sessions, not treat untracked hours as zero. Do not commit a private journal snapshot into this public repository.
+
 ## Data model and accuracy
 
 - `games`: local canonical ID, title, optional Backloggd game ID.
 - `external_ids`: source IDs, ready for later cross-source matching.
 - `user_games`: played substatus (if exposed), playing/backlog/wishlist flags, personal rating.
 - `sync_runs`: source, count and import timestamp.
+- `playthroughs` (optional v0.2): explicit personal sessions, platform, optional real minutes, optional dates.
+- `game_metadata` (optional v0.2): table reserved for publicly available title metadata; currently not populated.
 
 The publicly visible `played` collection **does not necessarily disclose completed/retired/shelved distinctions**; unknown substatus remains generic `played`. Ownership, platforms, playthroughs, play dates and trophies are **not imported**. No fabricated fields. Some games can belong to multiple tabs. Stable IDs distinguish games with identical titles.
 
