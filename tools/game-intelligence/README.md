@@ -21,7 +21,7 @@ For a privately staged issue, on a host with an **already authenticated** GitHub
 
 ```bash
 gh issue view <PRIVATE_SNAPSHOT_ISSUE_NUMBER> --repo igormego/personal-project-brain --json body --jq '.body' |
-  awk '/^\`\`\`csv$/{inside=1;next} /^\`\`\`$/{if(inside)exit} inside' > /tmp/backloggd-snapshot.csv
+  awk '/^```csv$/{inside=1;next} /^```$/{if(inside)exit} inside' > /tmp/backloggd-snapshot.csv
 python3 game_db.py --db /tmp/games.db --csv /tmp/backloggd-snapshot.csv --dry-run
 python3 game_db.py --db /path/to/private/games.db --csv /tmp/backloggd-snapshot.csv
 ```
