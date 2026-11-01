@@ -1,0 +1,6 @@
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.csv
+__pycache__/

@@ -1,0 +1,25 @@
+name: Game Intelligence Python Tests
+on:
+  pull_request:
+    paths:
+      - "tools/game-intelligence/**"
+      - ".github/workflows/game-intelligence-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/game-intelligence/**"
+      - ".github/workflows/game-intelligence-tests.yml"
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run offline tests (no Backloggd or Homelab network)
+        working-directory: tools/game-intelligence
+        run: python -m unittest discover -s tests -v
