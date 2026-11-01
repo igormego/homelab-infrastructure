@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for a new Game Intelligence snapshot every 15 minutes
+
+[Timer]
+OnStartupSec=2min
+OnUnitInactiveSec=15min
+AccuracySec=1min
+Unit=game-intelligence-sync.service
+
+[Install]
+WantedBy=timers.target

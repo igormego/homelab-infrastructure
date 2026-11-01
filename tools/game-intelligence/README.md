@@ -36,6 +36,33 @@ python3 game_db.py --db ./games.db --csv /path/to/backloggd.csv
 
 The public HTML reader fetches **four status tabs** (played, playing, backlog and wishlist), follows `?page=N` pagination, uses Backloggd card IDs for identity, and converts its displayed 0–10 `data-rating` value to 0–5 stars. It enforces bounded responses, a request pause, and fail-closed behavior on fetching errors, duplicate pages and invalid identities. Public page shape and the current 40-card page size are undocumented and can change.
 
+## v0.4.1 — optional 15-minute private snapshot poll
+
+This is a **user-level systemd timer**, not a new Background Backloggd scraper. It reads only the private GitHub manifest Issue #96 at each tick. If the version has not advanced, it performs **no** SQLite backup, no writes, and does not fetch the three full snapshot issues. If the version advances, it runs the existing v0.4 validated staged SQLite import. The user has already accepted baseline generation `2026-11-01.1`; that generation is expected to yield `unchanged`. No automatic upstream snapshot producer has been deployed.
+
+All files are kept under `tools/game-intelligence/`: `snapshot_poller.py`, `run-poller.sh`, `systemd/game-intelligence-sync.service`, and `systemd/game-intelligence-sync.timer`. The wrapper reads a pre-existing token from `~/.config/game-intelligence/github-token` **at execution time**; systemd unit files and GitHub never store credentials. The token should be scoped to read only the single private transport repository. The user service runs under the existing user rather than root, and must have write access only where the SQLite catalog already lives. The wrapper uses a local `flock` to avoid overlapping timer runs.
+
+Install the four files into the matching user paths, then run:
+
+```bash
+# Optional explicit one-shot test, before enabling unattended polling:
+systemctl --user daemon-reload
+systemctl --user start game-intelligence-sync.service
+systemctl --user status game-intelligence-sync.service --no-pager
+
+# After acceptance, enable the 15-minute user timer:
+systemctl --user enable --now game-intelligence-sync.timer
+systemctl --user list-timers --all | grep game-intelligence
+
+# On a dedicated always-on Homelab host, enable a user manager after logout
+# (requires operator authorization; necessary for the user timer to survive logout):
+sudo loginctl enable-linger "$USER"
+```
+
+Rollback (does not change the SQLite database or its backups): `systemctl --user disable --now game-intelligence-sync.timer`; `sudo loginctl disable-linger "$USER"` only if this task was its sole consumer. Do **not** remove the token or existing sync cursor automatically. `systemctl --user status` on a oneshot service may show `inactive (dead)` after a successful exit; check exit status or journal instead.
+
+The timer does not detect edits to an existing snapshot generation, because the fast path trusts the protocol's immutable version policy. To force a comprehensive verification, run `snapshot_sync.py` directly. Creating and publishing a **new** verified snapshot plus advancing the manifest pointer is still a separate ChatGPT-guided action; no automatic recurring scraping from Backloggd has been enabled.
+
 ## Private snapshot sync consumer (v0.4, source-only)
 
 Three previously accepted source feeds now have a **single private version pointer**, Project OS transport Issue #96:

@@ -1,0 +1,8 @@
+[Unit]
+Description=Game Intelligence - private snapshot pull (only new versions)
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=true
+ExecStart=/usr/bin/bash %h/.local/share/game-intelligence/run-poller.sh
+TimeoutStartSec=240
