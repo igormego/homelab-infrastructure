@@ -36,6 +36,23 @@ python3 game_db.py --db ./games.db --csv /path/to/backloggd.csv
 
 The public HTML reader fetches **four status tabs** (played, playing, backlog and wishlist), follows `?page=N` pagination, uses Backloggd card IDs for identity, and converts its displayed 0–10 `data-rating` value to 0–5 stars. It enforces bounded responses, a request pause, and fail-closed behavior on fetching errors, duplicate pages and invalid identities. Public page shape and the current 40-card page size are undocumented and can change.
 
+## Game metadata (v0.3): private snapshot pull
+
+The homelab receives a Cloudflare anti-bot challenge when reading Backloggd. Do not automate retries against that challenge or publish this user's complete game list in this public repository. Public game-details metadata may be collected by a separately authorized reader and staged as **CSV batches inside one private GitHub Issue**, with provenance.
+
+Import the already prepared title metadata snapshot (Project OS private Issue #95) after authenticating the existing GitHub CLI **locally on the host**. Never paste a GitHub token into chat, command history, or a public repo:
+
+```bash
+# Read-only local verification: no SQLite writes
+python3 metadata_import.py --db /path/to/private/games.db --gh-issue 95 --expected-count 145 --dry-run
+# Back up the actual DB first; next command updates ONLY metadata rows
+python3 metadata_import.py --db /path/to/private/games.db --gh-issue 95 --expected-count 145
+```
+
+`--csv /path/to/metadata.csv` is an offline alternative that does not need GitHub CLI. The importer checks every canonical Backloggd ID and title against the existing games table, refuses incomplete snapshots when an expected count is specified, and performs idempotent transactions. It does not touch ratings, playing status, playthroughs or game count. `game_metadata` stores exact published date (if known), genre list, platform availability, combined **credited companies** and source URL. **Backloggd does not label developer vs publisher roles in the observed public markup**; `developers_json` and `publishers_json` stay NULL rather than guessing. Platform availability is not the user's actual played platform.
+
+Future metadata refreshes use a separately published **versioned private snapshot** and its explicit Issue number. This is a repeatable pull/apply path, **not an unattended Backloggd synchronization**: the ChatGPT-connected page reader does not run inside the Homelab or GitHub Actions, and no automatic snapshot producer is currently deployed. Existing source-state and user-data synchronization are likewise one-shot until a secured transport/scheduler is implemented.
+
 ## Personal playthroughs (v0.2)
 
 Historically played titles have no trustworthy hours or completion dates. **Do not assume zero playtime, infer a year, or fill missing data.** The owner started detailed Backloggd logging in 2026; earlier games retain their ratings and played status with unknown playtime/date. Even after 2026, absent values remain SQL `NULL`. An explicit playthrough is different from the public game's *community average* hours.
