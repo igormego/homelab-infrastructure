@@ -1,5 +1,11 @@
 # Roadmap
 
+## Game Intelligence — 2026-11-01
+
+- **Verified host:** private catalog with 145 games; SQLite integrity `ok`; direct host reads from Backloggd face an anti-bot challenge. Initial data delivered via a private GitHub snapshot rather than a public CSV.
+- **Source milestone:** PR #37 merged and scoped offline CI passed (17 tests). Optional journal import and `playthroughs` support exact 2026 sessions, missing playtime as `NULL`, and no fabricated legacy dates. `game_metadata` is reserved but unpopulated.
+- **Next:** backup existing DB, validate the three-session private journal snapshot from Project OS Issue #93 with a no-write dry-run, and only then perform one explicit local journal import. Later: robust snapshot refresh and optional Backloggd title metadata; IGDB direct API not required now. No automated synchronization/deployment is active.
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Completed:** stable immutable control image/Compose pin and controlled service
