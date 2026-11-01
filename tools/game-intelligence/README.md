@@ -13,6 +13,21 @@ python3 game_db.py --db ./games.db --public-profile YOUR_BACKLOGGD_USERNAME
 
 The first command validates a public snapshot **without writing**. The second initializes and imports into a local SQLite database. Run a full dry-run before introducing a scheduled sync. Private deployments should use an explicit data location and backups, e.g. `/data/agents/game-intelligence/db/games.db`. There is no deployed service, cron, image, credential or automatic sync.
 
+### Private GitHub snapshot relay (for blocked host access)
+
+If the Homelab gets a Cloudflare "Making sure you're not a bot!" page, do **not** retry with scraped credentials or disable protection. A separate authorized client can read the public profile and stage a one-time CSV payload in a **private** GitHub Issue in the Project OS repository (transport only, not the database's source of truth). The payload includes the columns `Title,Rating,Status,Backlog,Backloggd ID,Playing,Wishlist`. The optional ID/flag columns retain canonical identity and overlapping categories.
+
+For a privately staged issue, on a host with an **already authenticated** GitHub CLI:
+
+```bash
+gh issue view <PRIVATE_SNAPSHOT_ISSUE_NUMBER> --repo igormego/personal-project-brain --json body --jq '.body' |
+  awk '/^\`\`\`csv$/{inside=1;next} /^\`\`\`$/{if(inside)exit} inside' > /tmp/backloggd-snapshot.csv
+python3 game_db.py --db /tmp/games.db --csv /tmp/backloggd-snapshot.csv --dry-run
+python3 game_db.py --db /path/to/private/games.db --csv /tmp/backloggd-snapshot.csv
+```
+
+Don't run the import until the staged CSV header and row count look correct. Delete the local temporary CSV when no longer needed. Private Issue access is required; never publish the extracted CSV or database in this public repository. This is a *snapshot*, not a continuous background sync.
+
 If outbound scraping fails, optional **manual CSV fallback** for CSVs containing `Title, Rating, Status, Backlog`:
 
 ```bash
