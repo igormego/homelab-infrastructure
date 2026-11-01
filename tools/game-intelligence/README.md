@@ -36,6 +36,29 @@ python3 game_db.py --db ./games.db --csv /path/to/backloggd.csv
 
 The public HTML reader fetches **four status tabs** (played, playing, backlog and wishlist), follows `?page=N` pagination, uses Backloggd card IDs for identity, and converts its displayed 0–10 `data-rating` value to 0–5 stars. It enforces bounded responses, a request pause, and fail-closed behavior on fetching errors, duplicate pages and invalid identities. Public page shape and the current 40-card page size are undocumented and can change.
 
+## Private snapshot sync consumer (v0.4, source-only)
+
+Three previously accepted source feeds now have a **single private version pointer**, Project OS transport Issue #96:
+
+- `catalog_issue` — a full Backloggd user-games CSV in the private issue body (initial Issue #92).
+- `journal_issue` — explicit logged personal play sessions, with unknown historical hours remaining null (initial Issue #93).
+- `metadata_issue` — CSV batches of published game details in the private issue comments (initial Issue #95).
+
+`snapshot_sync.py` pulls all three using **the local GitHub CLI** and a previously authenticated read-only-capable GitHub account. It validates the signed-in user's access to the private repository, the version manifest's counts, all stable IDs and matching titles, and source-record consistency before touching SQLite. It previews by default. `--apply` first makes an independent SQLite backup, builds a separate staged DB copy, applies all three imports to that copy, checks SQLite integrity and foreign keys, then uses the SQLite backup API to promote the verified candidate to the existing DB path. A durable generation/fingerprint cursor makes identical replays no-ops; changing a snapshot without incrementing the manifest generation is rejected. Status deletions in Backloggd are **not yet propagated**; upstream catalog importer does not delete missing rows. **Never assume complete mirroring or install cron before these semantics are accepted.**
+
+```bash
+# Requires 'gh' installed and authenticated locally with PRIVATE repo read access:
+# gh auth status
+python3 snapshot_sync.py --db /path/to/private/games.db
+# Only after reviewing the preview (creates a timestamped local SQLite backup):
+python3 snapshot_sync.py --db /path/to/private/games.db --apply
+```
+
+The initial generation in Issue #96 is `2026-11-01.1`; its three underlying imports have already been performed manually. Initial `--apply` is idempotent but will still create a backup and write the new generation cursor. The script never calls Backloggd, does not install a schedule, and does not copy private CSVs into the public repo. Ensure the private issue token/credential has only the minimum permissions needed, ideally a narrowly scoped read-only GitHub credential.
+
+**Two distinct missing production boundaries:** (1) a repeatable upstream producer that reads Backloggd outside the bot-blocked Homelab and publishes fully validated private snapshots before atomically advancing Issue #96, and (2) a reviewed host credential and schedule for pulling/applying new generations. This code is a tested **consumer**, not evidence that either boundary is deployed.
+
+
 ## Game metadata (v0.3): private snapshot pull
 
 The homelab receives a Cloudflare anti-bot challenge when reading Backloggd. Do not automate retries against that challenge or publish this user's complete game list in this public repository. Public game-details metadata may be collected by a separately authorized reader and staged as **CSV batches inside one private GitHub Issue**, with provenance.
