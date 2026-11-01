@@ -10,6 +10,10 @@
 
 **Next:** safely enrich metadata from Backloggd and design repeatable, authenticated private snapshot delivery without routing bot-blocked Homelab requests directly to Backloggd. Retain backups and the zero-inference rule for historic playtime.
 
+**Metadata source milestone — 2026-11-01:** all 145 profile-derived Backloggd detail URLs were read through the separate authorized web reader. A private, source-tagged 145-row metadata snapshot is staged in Project OS Issue #95 (genre available for 143, credited companies for 142, release date for 141). The new strict `metadata_import.py` in merged [PR #38](https://github.com/igormego/homelab-infrastructure/pull/38) supports a private CSV or authenticated GitHub issue transfer, with offline CI passing. No account-specific data was committed to the public repo. All 145 rows were checked against the original 145 ID/title pairs locally; **the on-host metadata import has not been performed or verified yet**. Backloggd's visible companies are untyped, so publisher/developer roles are not inferred.
+
+**Next:** operator stages the private metadata CSV and runs `metadata_import.py` dry-run, backup, import and read-back. Then scope the unattended sync producer (the host's direct Backloggd traffic is bot-blocked), authenticated private transport and bounded apply policy. Current retrieval via ChatGPT and private GitHub issue comments is one-shot, not background auto-sync.
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Verified:** the existing control worker now uses a stable Compose configuration
