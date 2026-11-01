@@ -1,5 +1,9 @@
 # Current State
 
+## Game Intelligence v0.1 — source-only — 2026-11-01
+
+[PR #35](https://github.com/igormego/homelab-infrastructure/pull/35) merged a standalone, credential-free Backloggd public-profile to SQLite importer under `tools/game-intelligence/`, plus dry-run mode, offline regression tests and scoped Python CI. The CI run passed (8 tests); only the public HTML shape was inspected from a separate web client. No import from the Homelab, on-host database, scheduled sync, credential or service deployment has been verified. Next: operator-hosted public-profile dry-run, then a bounded initial import if outbound access succeeds.
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Verified:** the existing control worker now uses a stable Compose configuration
