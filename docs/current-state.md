@@ -14,6 +14,8 @@
 
 **Next (sync workstream):** replace manual CSV transfer with a versioned, authenticated private snapshot pull/apply loop, while separately resolving how fresh Backloggd data will be collected without host-side bot-blocked requests. No recurring sync or upstream update producer has been enabled.
 
+**Sync consumer source milestone — 2026-11-01 (Component-tested):** merged [PR #39](https://github.com/igormego/homelab-infrastructure/pull/39) with 32 passing offline Game Intelligence tests. Private transport manifest is [Project OS Issue #96](https://github.com/igormego/personal-project-brain/issues/96), referring to immutable snapshot Issues #92/#93/#95. `snapshot_sync.py` reads private manifest through authenticated local GitHub CLI, validates IDs/counts, builds a temporary SQLite candidate, backs up and promotes the candidate only after integrity/foreign key checks, and uses generation/hash cursor to make reruns idempotent. No Homelab deployment/test of this consumer; host `gh` installation/auth status unknown (prior Snap install failed). No upstream automated producer/schedule exists, so **not an end-to-end automatic sync**. Remaining: one-time minimal-scope GitHub authentication for the host, bounded host acceptance of the consumer, and a schedulable upstream Backloggd snapshot source outside Cloudflare-blocked host.
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Verified:** the existing control worker now uses a stable Compose configuration
