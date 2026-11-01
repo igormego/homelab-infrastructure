@@ -14,7 +14,8 @@
 - **v0.4 accepted live (2026-11-01):** GitHub CLI v2.103.3 and read-only access to private Issue #96 verified; initial snapshot generation `2026-11-01.1` applied on host after a successful preview, producing a timestamped SQLite backup and durable sync cursor. Post-apply: 145 games / 145 metadata / 3 playthroughs / 1 cursor, SQLite integrity `ok`.
 - **Next:** enable an appropriate on-demand ChatGPT refresh/publish process and safe host polling/trigger. No scheduled poller or upstream background reader exists. The user prefers on-demand Backloggd updates; ČSFD and Goodreads remain separate.
 
-- **15-minute polling prepared, not live:** [PR #40](https://github.com/igormego/homelab-infrastructure/pull/40) merged and CI passed. A one-Issue manifest poll prevents repeated full snapshot reads and SQLite writes when version is unchanged; reusable user-scoped systemd timer and local token wrapper are checked in. **Next:** host operator installs timer, enables user lingering, verifies one `unchanged` run and next scheduled trigger. An automatic Backloggd producer is not installed; upstream refresh remains on demand.
+- **Timer installed and first service execution successful (2026-11-01):** user enabled `game-intelligence-sync.timer`; systemd reported `Result=success`, `ExecMainStatus=0`. Immediate listing showed `NEXT=-` and last trigger 154 ms ago; verify that the next 15-minute run is scheduled after settling. PR #40 merged and CI passed.
+- **Remaining:** validate next timer trigger and journal; Backloggd-to-GitHub publisher remains on-demand via ChatGPT, not automatic. Do not conflate the host GitHub consumer with an autonomous Backloggd crawler.
 
 ## Personal AI Brain control durability — 2026-10-27
 
