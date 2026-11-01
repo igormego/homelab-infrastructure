@@ -9,6 +9,8 @@
 - **Metadata live acceptance (2026-11-01):** 145 metadata rows validated and imported on host; owner verified 145 games, 145 metadata rows, 3 playthroughs, and SQLite integrity `ok`. SQLite pre-metadata backup retained. Source importer: [PR #38](https://github.com/igormego/homelab-infrastructure/pull/38); private snapshot transport: Project OS Issue #95. Game metadata coverage: 143 genres, 142 credited companies, 141 release dates.
 - **Next: synchronization.** Build a secure, repeatable snapshot pull/apply path with no direct host scraping (Cloudflare blocked). Keep upstream snapshot producer separate from the host consumer; scope a sustainable non-Codex upstream reader and cadence. No unattended sync deployed.
 
+- **Sync consumer component-tested:** [PR #39](https://github.com/igormego/homelab-infrastructure/pull/39) merged, 32 offline tests passing. Private pointer Issue #96 supports versioned complete catalog/journal/metadata snapshots. Pull/apply is safe-by-default with staged SQLite validation, backup, fingerprint cursor and no blind reimports. No host deployment yet; `gh` CLI credentials and outbound producer remain prerequisites. **No recurring sync is active.**
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Completed:** stable immutable control image/Compose pin and controlled service
