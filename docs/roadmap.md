@@ -11,6 +11,9 @@
 
 - **Sync consumer component-tested:** [PR #39](https://github.com/igormego/homelab-infrastructure/pull/39) merged, 32 offline tests passing. Private pointer Issue #96 supports versioned complete catalog/journal/metadata snapshots. Pull/apply is safe-by-default with staged SQLite validation, backup, fingerprint cursor and no blind reimports. No host deployment yet; `gh` CLI credentials and outbound producer remain prerequisites. **No recurring sync is active.**
 
+- **v0.4 accepted live (2026-11-01):** GitHub CLI v2.103.3 and read-only access to private Issue #96 verified; initial snapshot generation `2026-11-01.1` applied on host after a successful preview, producing a timestamped SQLite backup and durable sync cursor. Post-apply: 145 games / 145 metadata / 3 playthroughs / 1 cursor, SQLite integrity `ok`.
+- **Next:** enable an appropriate on-demand ChatGPT refresh/publish process and safe host polling/trigger. No scheduled poller or upstream background reader exists. The user prefers on-demand Backloggd updates; ČSFD and Goodreads remain separate.
+
 ## Personal AI Brain control durability — 2026-10-27
 
 **Completed:** stable immutable control image/Compose pin and controlled service
