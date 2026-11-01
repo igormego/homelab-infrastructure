@@ -18,6 +18,32 @@ class GameDbTest(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT count(*) FROM sync_runs").fetchone()[0], 2)
                 self.assertEqual(conn.execute("SELECT played_status,backlog,rating FROM user_games WHERE game_id=1").fetchone(), ("completed", 1, 4.5))
 
+    def test_private_snapshot_csv_keeps_ids_and_overlapping_flags(self):
+        with tempfile.TemporaryDirectory() as d:
+            csv_path = Path(d) / "snapshot.csv"
+            db = Path(d) / "games.db"
+            csv_path.write_text(
+                'Title,Rating,Status,Backlog,Backloggd ID,Playing,Wishlist\n'
+                '"Game, One",4.5,Played,Yes,103329,Yes,No\n'
+                'Another,,Wishlist,No,68353,No,Yes\n', encoding="utf-8"
+            )
+            rows = read_csv(csv_path)
+            self.assertEqual((rows[0].game_id, rows[0].playing, rows[0].backlog, rows[0].rating),
+                             ("103329", True, True, 4.5))
+            self.assertEqual(import_rows(db, rows, "private_snapshot"), 2)
+            with sqlite3.connect(db) as con:
+                result = con.execute(
+                    "SELECT g.backloggd_game_id,u.played_status,u.playing,u.backlog FROM games g JOIN user_games u ON u.game_id=g.id WHERE g.title='Game, One'"
+                ).fetchone()
+                self.assertEqual(result, ("103329", "played", 1, 1))
+
+    def test_private_snapshot_csv_rejects_invalid_id(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "bad.csv"
+            p.write_text("Title,Rating,Status,Backlog,Backloggd ID\\nGame,4,played,no,bad-id\\n".replace("\\n", "\n"), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Invalid Backloggd"):
+                read_csv(p)
+
     def test_public_html_merges_tabs_and_ids(self):
         html = '<div id="user_games"><div class="card mx-auto game-cover quick-access user-rating" game_id="120" data-rating="9"><a href="/games/test/"></a><div><img alt="Example &amp; Other"></div></div></div>'
         rows = merge_rows(parse_tab(html, "played") + parse_tab(html, "backlog"))
