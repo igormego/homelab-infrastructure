@@ -73,6 +73,13 @@ def rating_value(value: str | None, *, ten_scale: bool = False) -> float | None:
 
 
 def read_csv(path: Path) -> list[GameRow]:
+    """Read CSV snapshots, including optional stable IDs and overlapping status flags."""
+    def yes_no(value: str | None, name: str) -> bool:
+        normalized = (value or "").strip().lower()
+        if normalized not in ("", "yes", "no", "true", "false", "1", "0"):
+            raise ValueError(f"Invalid {name} value")
+        return normalized in ("yes", "true", "1")
+
     with path.open(encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream)
         if not reader.fieldnames or not {"Title", "Rating", "Status", "Backlog"}.issubset(reader.fieldnames):
@@ -83,15 +90,19 @@ def read_csv(path: Path) -> list[GameRow]:
             status = (data["Status"] or "").strip().lower()
             if not title or status not in STATUS:
                 raise ValueError("Invalid title or status in CSV")
-            backlog_value = (data["Backlog"] or "").strip().lower()
-            if backlog_value not in ("", "yes", "no", "true", "false", "1", "0"):
-                raise ValueError("Invalid backlog value")
-            rows.append(GameRow(title=title, played_status=status if status in PLAYED else None,
-                                playing=status == "playing", wishlist=status == "wishlist",
-                                backlog=backlog_value in ("yes", "true", "1"),
-                                rating=rating_value(data["Rating"])))
+            game_id = (data.get("Backloggd ID") or "").strip()
+            if game_id and not re.fullmatch(r"[1-9][0-9]{0,14}", game_id):
+                raise ValueError("Invalid Backloggd game ID")
+            rows.append(GameRow(
+                title=title,
+                game_id=game_id or None,
+                played_status=status if status in PLAYED else None,
+                playing=status == "playing" or yes_no(data.get("Playing"), "Playing"),
+                wishlist=status == "wishlist" or yes_no(data.get("Wishlist"), "Wishlist"),
+                backlog=yes_no(data["Backlog"], "Backlog"),
+                rating=rating_value(data["Rating"]),
+            ))
     return rows
-
 
 class GameCardParser(HTMLParser):
     """Parse public game-cover cards only; ignore placeholders and private state."""
