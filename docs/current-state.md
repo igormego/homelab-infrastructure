@@ -1,8 +1,12 @@
 # Current State
 
-## Game Intelligence v0.1 — source-only — 2026-11-01
+## Game Intelligence — 145-game SQLite catalog live; v0.2 journal source-only — 2026-11-01
 
-[PR #35](https://github.com/igormego/homelab-infrastructure/pull/35) merged a standalone, credential-free Backloggd public-profile to SQLite importer under `tools/game-intelligence/`, plus dry-run mode, offline regression tests and scoped Python CI. The CI run passed (8 tests); only the public HTML shape was inspected from a separate web client. No import from the Homelab, on-host database, scheduled sync, credential or service deployment has been verified. Next: operator-hosted public-profile dry-run, then a bounded initial import if outbound access succeeds.
+**Verified by owner command:** a private SQLite catalog at `/data/agents/game-intelligence/db/games.db` contains 145 games and returns `PRAGMA integrity_check = ok`. The public-profile importer itself is blocked on the host by a Backloggd bot challenge; the initial data was transferred from the separate web reader as a one-time **private** Project OS Issue #92 snapshot. Source PRs [#35](https://github.com/igormego/homelab-infrastructure/pull/35) and [#36](https://github.com/igormego/homelab-infrastructure/pull/36) are merged. No live automatic sync exists.
+
+**Component-tested / not yet imported on host:** [PR #37](https://github.com/igormego/homelab-infrastructure/pull/37) adds `journal_import.py`, optional `playthroughs` / `game_metadata` tables, strict ID/date checks, and null-safe recorded 2026 journal sessions. Scoped CI passed (17 offline tests). A private three-session transfer snapshot is held separately in Project OS Issue #93; `game_metadata` is schema-only, without an importer. The owner clarified that detailed playtime and finish-date tracking began in 2026; older games must preserve unknown playtime/dates, not infer zero or completion years.
+
+**Next:** take a backup of the existing SQLite catalog, stage the private journal CSV, execute `journal_import.py --dry-run` and then separately review/run the one-time host import. Recurring synchronization and bulk title metadata collection remain unimplemented.
 
 ## Personal AI Brain control durability — 2026-10-27
 
