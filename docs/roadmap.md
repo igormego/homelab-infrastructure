@@ -6,6 +6,8 @@
 - **Verified journal import:** PR #37 merged (17 offline CI tests). Owner reported successful no-write dry-run, a database backup, three imported 2026 sessions, 145 games retained and SQLite integrity `ok`. Hades II: 7,200 recorded minutes, Alan Wake Remastered: 1,080 minutes, Persona 3 Reload: playtime unknown. Historic records have no inferred dates/hours.
 - **Next:** enrich title metadata from public Backloggd details, then implement repeatable private snapshot delivery. Direct IGDB API not required. No automatic sync or host-facing Backloggd scraper is live.
 
+- **Metadata source-only:** public detail pages for all 145 games captured; 143 with genres, 142 with combined company credits, 141 with exact release dates. Private data is staged separately in Project OS Issue #95, with original ID/title matching independently checked. [PR #38](https://github.com/igormego/homelab-infrastructure/pull/38) adds transactional, idempotent metadata imports from private CSV or authenticated GitHub issue. GitHub CI passed; no metadata has yet been imported on the Homelab.
+- **Next:** local CSV dry-run, backup, one real import and read-back. Then build a bounded private snapshot pull/apply sync and choose an authorized, schedulable source reader; the existing ChatGPT reader does not run autonomously or on the host, which is bot-blocked. No IGDB API required for title metadata.
 ## Personal AI Brain control durability — 2026-10-27
 
 **Completed:** stable immutable control image/Compose pin and controlled service
