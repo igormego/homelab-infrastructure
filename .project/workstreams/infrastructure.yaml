@@ -166,3 +166,21 @@ verification:
 sync:
   status: "synced"
   storage: ".project/workstreams/infrastructure.yaml"
+
+remote_access_issue_41:
+  status: "Blocked"
+  last_verified: "2026-11-03"
+  issue: "https://github.com/igormego/homelab-infrastructure/issues/41"
+  verified:
+    - "Existing local-homelab-admin BatchMode LAN SSH succeeds."
+    - "Ubuntu 26.04 LTS; SSH and Docker active; existing media/control containers running at preflight."
+    - "Windows NordVPN 8.14.4.0 installed through WinGet with verified installer hashes; private account login pending."
+    - "Server installation script staged privately with pinned official installer and pre-change inventory capture."
+    - "SSH baseline allows public-key and password authentication; root password login prohibited; keyboard-interactive authentication disabled. No SSH settings changed."
+  acceptance:
+    off_lan_tested: false
+    meshnet_alias_verified: false
+    startup_reconnect_verified: false
+  blocker: "Private interactive authorization/enrollment and completion of the server installer are pending."
+  exact_next_action: "Complete the staged server installer in the user's authenticated terminal and private Nord login; then verify peer restrictions before Meshnet enablement and hotspot acceptance."
+  rollback: "No server network configuration changed by automation. Private pre-change inventory is retained on the host; Windows client installed without a requested exit-VPN connection."
