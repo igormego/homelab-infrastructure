@@ -172,16 +172,19 @@ remote_access_issue_41:
   last_verified: "2026-11-03"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/41"
   verified:
-    - "NordVPN installed and Meshnet enabled on Windows notebook and Ubuntu server; one connected Windows peer and no external peers observed."
-    - "Server peer incoming access enabled; traffic routing, local network access, file transfer and automatic file acceptance disabled."
-    - "Separate machine-local Meshnet SSH alias works on home LAN using existing key and strict original host-key trust; canonical LAN alias works."
-    - "NordVPN service restart completed; Meshnet SSH reconnected, effective SSH settings and container IDs unchanged; SSH and Docker active."
+    - "Windows and Ubuntu Meshnet enabled; one Windows peer connected, no external peers observed."
+    - "Server incoming access enabled for notebook; routing, local network access, file transfer and automatic file acceptance disabled."
+    - "Separate machine-local Meshnet SSH alias uses the existing key and strict original host-key trust; canonical LAN SSH works."
+    - "NordVPN service restart completed; effective SSH settings and container IDs unchanged; SSH and Docker active."
+    - "On independent hotspot, alias matched the server Meshnet address, port 22 used the NordLynx route without a proxy, and the original home direct LAN route was absent."
+    - "Hotspot TCP 22 and authenticated SSH with a read-only command succeeded twice; a separate intervening SSH attempt timed out. Server reported the Windows peer connected during a successful attempt."
+    - "After return to LAN, canonical SSH, SSH listener and services were verified; existing container IDs unchanged."
     - "Existing SSH baseline permits password and public-key authentication; root password login prohibited and keyboard-interactive disabled."
-    - "Independent hotspot test confirmed absence of the direct home LAN route, but Meshnet SSH timed out; on return to LAN both SSH paths worked."
   acceptance:
     off_lan_tested: true
-    off_lan_ssh_passed: false
+    off_lan_ssh_passed: true
+    reliability_verified: false
     startup_reconnect_verified: true
-  blocker: "Meshnet SSH timed out on mobile hotspot; root cause unknown."
-  exact_next_action: "Diagnose the failed off-LAN Meshnet path without relaxing SSH or exposing router ports; repeat independent hotspot acceptance."
+  blocker: "Intermittent hotspot SSH timeout; cause unknown and travel reliability not established."
+  exact_next_action: "Diagnose intermittent Meshnet transport while preserving SSH and peer permissions; repeat off-LAN reliability test."
   rollback: "Disable server Meshnet with nordvpn set meshnet off; pre-change inventory retained privately on host. Existing SSH key and canonical alias preserved."
