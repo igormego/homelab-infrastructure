@@ -172,15 +172,16 @@ remote_access_issue_41:
   last_verified: "2026-11-03"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/41"
   verified:
-    - "Existing local-homelab-admin BatchMode LAN SSH succeeds."
-    - "Ubuntu 26.04 LTS; SSH and Docker active; existing media/control containers running at preflight."
-    - "Windows NordVPN 8.14.4.0 installed through WinGet with verified installer hashes; private account login pending."
-    - "Server installation script staged privately with pinned official installer and pre-change inventory capture."
-    - "SSH baseline allows public-key and password authentication; root password login prohibited; keyboard-interactive authentication disabled. No SSH settings changed."
+    - "NordVPN installed and Meshnet enabled on Windows notebook and Ubuntu server; one connected Windows peer and no external peers observed."
+    - "Server peer incoming access enabled; traffic routing, local network access, file transfer and automatic file acceptance disabled."
+    - "Separate machine-local Meshnet SSH alias works on home LAN using existing key and strict original host-key trust; canonical LAN alias works."
+    - "NordVPN service restart completed; Meshnet SSH reconnected, effective SSH settings and container IDs unchanged; SSH and Docker active."
+    - "Existing SSH baseline permits password and public-key authentication; root password login prohibited and keyboard-interactive disabled."
+    - "Independent hotspot test confirmed absence of the direct home LAN route, but Meshnet SSH timed out; on return to LAN both SSH paths worked."
   acceptance:
-    off_lan_tested: false
-    meshnet_alias_verified: false
-    startup_reconnect_verified: false
-  blocker: "Private interactive authorization/enrollment and completion of the server installer are pending."
-  exact_next_action: "Complete the staged server installer in the user's authenticated terminal and private Nord login; then verify peer restrictions before Meshnet enablement and hotspot acceptance."
-  rollback: "No server network configuration changed by automation. Private pre-change inventory is retained on the host; Windows client installed without a requested exit-VPN connection."
+    off_lan_tested: true
+    off_lan_ssh_passed: false
+    startup_reconnect_verified: true
+  blocker: "Meshnet SSH timed out on mobile hotspot; root cause unknown."
+  exact_next_action: "Diagnose the failed off-LAN Meshnet path without relaxing SSH or exposing router ports; repeat independent hotspot acceptance."
+  rollback: "Disable server Meshnet with nordvpn set meshnet off; pre-change inventory retained privately on host. Existing SSH key and canonical alias preserved."
