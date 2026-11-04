@@ -1,9 +1,12 @@
 import sqlite3
+import hashlib
+import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
 
-from lifecycle_cli import watched_catalog, build_report
+from lifecycle_cli import watched_catalog, build_report, archived_receipts
 from test_lifecycle import IDENTITY, RADARR, movie, receipt
 
 
@@ -49,6 +52,21 @@ class InventoryTest(unittest.TestCase):
         self.assertEqual(missing['decisions'],{'needs_review':1})
         accepted=build_report(c,[RADARR],[],[movie(1244)],receipts={123:receipt()})
         self.assertEqual(accepted['decisions'],{'archived':1})
+
+    def test_complete_private_receipt_file_is_verified(self):
+        state=Path(self.tmp.name)/"state"
+        state.mkdir(mode=0o700)
+        payload=Path(self.tmp.name)/"Heretic.mp4"
+        payload.write_bytes(b"synthetic test film data")
+        receipt_data=receipt()
+        receipt_data.update({"file":str(payload),
+                            "sha256":hashlib.sha256(payload.read_bytes()).hexdigest()})
+        file=state/"123.json"
+        file.write_text(json.dumps(receipt_data))
+        os.chmod(file,0o600)
+        self.assertEqual(archived_receipts(str(state))[123]["stage"],"verified")
+        payload.write_bytes(b"changed")
+        self.assertNotIn(123,archived_receipts(str(state)))
 
     def test_conflicting_external_id_fails_closed(self):
         c=sqlite3.connect(self.db)
