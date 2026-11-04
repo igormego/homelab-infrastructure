@@ -53,6 +53,8 @@ def execute_archive_batch(archive, movie_ids, *, reviewed_batch_fingerprint, max
     """Run only a fresh matching plan; never retry an uncertain single-film result."""
     if type(execute) is not bool:
         return {"decision":"blocked","reason":"invalid_execute_flag","mutation_attempted":False}
+    attempted=False
+    completed=[]
     try:
         initial=plan_archive_batch(archive,movie_ids,max_movies=max_movies)
         if not execute:
@@ -61,7 +63,6 @@ def execute_archive_batch(archive, movie_ids, *, reviewed_batch_fingerprint, max
                 not isinstance(reviewed_batch_fingerprint,str) or
                 reviewed_batch_fingerprint!=initial["batch_fingerprint"]):
             return {"decision":"blocked","reason":"missing_or_stale_batch_approval","mutation_attempted":False}
-        completed=[]
         for row in initial["records"]:
             tmdb=row["tmdb_id"]
             # Every completed file was independently verified, no mutation needed.
@@ -70,8 +71,9 @@ def execute_archive_batch(archive, movie_ids, *, reviewed_batch_fingerprint, max
                 continue
             latest=archive.plan_archive_movie(tmdb)
             if latest.get("decision")!="eligible" or latest.get("plan_fingerprint")!=row["fingerprint"]:
-                return {"decision":"stopped","reason":"fresh_preflight_changed","mutation_attempted":bool(completed),
+                return {"decision":"stopped","reason":"fresh_preflight_changed","mutation_attempted":attempted,
                         "completed":completed,"blocked_tmdb":tmdb}
+            attempted=True  # An upstream exception after this point has uncertain effects.
             one=archive.archive_movie(tmdb,execute=True,plan_fingerprint=row["fingerprint"])
             completed.append({"tmdb_id":tmdb,"decision":one.get("decision","unknown")})
             if one.get("decision")!="archived":
@@ -81,4 +83,6 @@ def execute_archive_batch(archive, movie_ids, *, reviewed_batch_fingerprint, max
                 "mutation_attempted":any(r["decision"]=="archived" for r in completed),
                 "completed":completed}
     except Exception:
-        return {"decision":"blocked","reason":"source_or_batch_unavailable","mutation_attempted":False}
+        return {"decision":"needs_review" if attempted else "blocked",
+                "reason":"operation_uncertain_no_retry" if attempted else "source_or_batch_unavailable",
+                "mutation_attempted":attempted,"completed":completed}
