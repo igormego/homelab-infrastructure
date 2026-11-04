@@ -35,6 +35,7 @@ Required private environment variables (never commit their values):
 | `MY_CINEMA_UI_JOURNAL_DIR` | Existing absolute POSIX 0700 directory for never-expiring UI receipts |
 | `REACQUIRE_JOURNAL_DIR` | Existing durable private reacquisition journal, shared with any other operator |
 | `MY_CINEMA_PORT` | Optional loopback port (default 8733) |
+| `MY_CINEMA_PUBLIC_ORIGIN` | Optional exact HTTPS origin only when behind a reviewed authenticated TLS proxy; otherwise loopback origin |
 | `PLEX_BASE_URL`, `PLEX_TOKEN` | Internal Plex server, private key |
 | `PLEX_MOVIES_LIBRARY_ID`, `PLEX_ARCHIVE_LIBRARY_ID` | Exact main and archive IDs |
 | `RADARR_BASE_URL`, `RADARR_API_KEY` | Canonical existing Radarr endpoint |
@@ -43,7 +44,7 @@ Required private environment variables (never commit their values):
 
 Basic authentication on plain HTTP is suitable **only on loopback**. To expose
 the UI on LAN or Meshnet, first approve a TLS proxy or authenticated tunnel
-with explicit network and permission boundaries. Never expose this listener
+with explicit network and permission boundaries, and set `MY_CINEMA_PUBLIC_ORIGIN` to the proxy HTTPS origin. Never expose this listener
 directly, and never pass API credentials to the browser. The HTML uses no
 JavaScript or third-party resources.
 
