@@ -92,6 +92,14 @@ posterizarr_assets_idea:
   concept: "Evaluate Posterizarr with Kometa local image assets as source-of-truth for chosen posters/backgrounds and later optional overlays; cache versus persistent assets and consistent collection/poster styling. May suit both Movies and archived Watched libraries."
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
+media_readonly_diagnostics:
+  status: "Source-tested in GitHub Actions; not deployed or live-accepted"
+  verified_on: "2026-11-04"
+  issue: "Homelab Issue #47 captures user report: Plex showed 3 versions but user believes 1 physical file for a newly watched Dexter episode; Bazarr missing SK despite SK/CZ provider candidates; Plex showed 25 Mbps Dexter versus 14 Mbps Carrie. Exact series/episode, Carrie release/year, Plex item details and causes remain unverified without authenticated live Media access."
+  implementation: "PR #48 merged as 32e0c3b8aeefcc8ebff0e6ee2fc49357e254c3dc, with green Python 3.11 synthetic CI. Bounded read-only tools/media-diagnostics/probe.py uses fixed Sonarr/Plex/Bazarr GET endpoints, conservative candidate resolution, Plex checkFiles Media/Part variants and bitrate_kbps, passive Bazarr episode subtitle state; avoids Bazarr providers/episodes GET because it triggers remote provider searches. No host credential or diagnostic server writes."
+  permission_boundary: "Normal ChatGPT/GitHub connector has no private Homelab SSH or internal service API. PAB media.resource_read currently source-only and limited to sonarr/overview; no general live episode query. PAB #83 has cross-owner comment to reuse typed Resource Broker/effect policy for media.inspect rather than bespoke tool/runner. No user copy/paste should be routine when this host connector is accepted."
+  next_action: "Using the existing machine-local Meshnet operator path or future approved PAB Resource Broker, run the source-tested GET-only probe for canonical latest Dexter episode and appropriate Carrie movie(s). Verify actual Plex part paths and inodes only under allowed media roots, inspect Bazarr release/profile/score evidence, distinguish measured playback bitrate versus file metadata, and report grounded root causes. No subtitle search, download, broad Plex rescan, delete, watched writes or quality changes without separate evidence and policy."
+
 my_cinema_ui_and_lifecycle_source:
   status: "Source-tested and merged, NOT deployed or live-accepted"
   verified_on: "2026-11-04"
@@ -254,6 +262,7 @@ important_open_loops:
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
   - "Samsung Walter Mitty playback with SRT remains unresolved; client debug logs were successfully captured but contain no explicit decoder/MediaSource error. After buffering at 21:36.366, play() interruption warning occurred later. Next: sanitize the evidence for the related Plex forum report and seek deeper Samsung HTML player telemetry; no repeat-only test."
+  - "Dexter/Carrie diagnostic 2026-11-04: source-only multi-service read-only probe merged in PR #48 and CI green; exact 3 Plex versions, missing SK Bazarr subtitles and 25 vs 14 Mbps causes NOT live-verified. Issue #47 owns exact host evidence; PAB #83 owns generic authenticated media.inspect resource transport; avoid duplicate special-purpose agent."
   - "Radarr audio policy deployed and API-verified on 2026-10-19: four compatible audio CFs +1, ten other audio CFs 0; CF cutoff 0 with quality upgrades retained. Future guide sync needs separate drift review (latest preview adds IMF +20); Sonarr unchanged."
 
 stale_or_unknown:
