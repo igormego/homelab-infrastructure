@@ -87,7 +87,13 @@ const app=createMyCinemaUi({
   username:required('MY_CINEMA_UI_USER'),password:required('MY_CINEMA_UI_PASSWORD'),
   secret:required('MY_CINEMA_UI_SIGNING_SECRET'),
   receiptDirectory:required('MY_CINEMA_UI_JOURNAL_DIR'),
-  origin:'http://127.0.0.1:'+port,
+  origin:(()=>{const external=process.env.MY_CINEMA_PUBLIC_ORIGIN;
+    if(!external) return 'http://127.0.0.1:'+port;
+    const u=new URL(external);
+    if(u.protocol!=='https:' || u.pathname!=='/' || u.search || u.hash ||
+       u.username || u.password) throw Error('external_origin_requires_https');
+    return u.origin+'/';
+  })(),
 });
 // Deliberately no hostname/bind override. Public/LAN ingress is a separate change.
 app.listen(port,'127.0.0.1',()=>process.stdout.write('my_cinema_ui_listening_loopback\n'));
