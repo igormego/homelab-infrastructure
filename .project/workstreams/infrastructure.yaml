@@ -168,23 +168,22 @@ sync:
   storage: ".project/workstreams/infrastructure.yaml"
 
 remote_access_issue_41:
-  status: "Blocked"
-  last_verified: "2026-11-03"
+  status: "Verified"
+  last_verified: "2026-11-04"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/41"
   verified:
-    - "Windows and Ubuntu Meshnet enabled; one Windows peer connected, no external peers observed."
-    - "Server incoming access enabled for notebook; routing, local network access, file transfer and automatic file acceptance disabled."
-    - "Separate machine-local Meshnet SSH alias uses the existing key and strict original host-key trust; canonical LAN SSH works."
-    - "NordVPN service restart completed; effective SSH settings and container IDs unchanged; SSH and Docker active."
-    - "On independent hotspot, alias matched the server Meshnet address, port 22 used the NordLynx route without a proxy, and the original home direct LAN route was absent."
-    - "Hotspot TCP 22 and authenticated SSH with a read-only command succeeded twice; a separate intervening SSH attempt timed out. Server reported the Windows peer connected during a successful attempt."
-    - "After return to LAN, canonical SSH, SSH listener and services were verified; existing container IDs unchanged."
-    - "Existing SSH baseline permits password and public-key authentication; root password login prohibited and keyboard-interactive disabled."
+    - "Windows notebook and Ubuntu server use NordVPN Meshnet with the existing SSH key and strict original host-key trust; the separate machine-local alias is retained."
+    - "The operator confirmed the Ubuntu peer online on mobile hotspot. The original direct home LAN route was absent, and the correct Meshnet endpoint used the Nord interface."
+    - "Ten sequential hotspot TCP 22 and key-based SSH probes passed with six-second pauses; TCP 47-154 ms and SSH command 550-988 ms. The server reported the notebook peer connected."
+    - "After the operator disconnected and reconnected the hotspot, three further TCP and SSH read-only probes passed."
+    - "After returning to the home LAN, canonical SSH and SSH, Docker and NordVPN services were active; container IDs matched the preserved baseline."
+    - "On 2026-11-03 a hotspot SSH timeout occurred between successful probes; its cause remains unknown. The 2026-11-04 sample does not prove future or unattended reliability."
+    - "Existing SSH baseline permits password and public-key authentication; root password login prohibited and keyboard-interactive disabled. No SSH or network configuration changes were made during this reliability check."
   acceptance:
     off_lan_tested: true
     off_lan_ssh_passed: true
-    reliability_verified: false
+    operator_interactive_travel_ssh: "accepted within the observed mobile-hotspot test scope"
+    unattended_reliability: "Unknown"
     startup_reconnect_verified: true
-  blocker: "Intermittent hotspot SSH timeout; cause unknown and travel reliability not established."
-  exact_next_action: "Diagnose intermittent Meshnet transport while preserving SSH and peer permissions; repeat off-LAN reliability test."
+  exact_next_action: "Use the existing separate Meshnet alias for interactive travel SSH; investigate if the previously observed intermittent timeout recurs."
   rollback: "Disable server Meshnet with nordvpn set meshnet off; pre-change inventory retained privately on host. Existing SSH key and canonical alias preserved."
