@@ -124,8 +124,8 @@ def plan_lifecycle(identity, radarr_movies, plex_movies, plex_archive, archive_r
                 return result("needs_review", "none", "archive_file_unavailable")
             if not isinstance(archive_receipt, dict) or (
                     archive_receipt.get("stage") != "verified" or
-                    str(archive_receipt.get("rating_key", "")) != str(archived[0]["ratingKey"]) or
-                    archive_receipt.get("tmdb") != identity["tmdb"]):
+                    str((archive_receipt.get("verified") or {}).get("rating_key", "")) != str(archived[0]["ratingKey"]) or
+                    (archive_receipt.get("identity") or {}).get("tmdb") != identity["tmdb"]):
                 return result("needs_review", "none", "archive_ownership_not_verified")
         elif archive_receipt is not None:
             return result("needs_review", "none", "orphaned_archive_receipt")
