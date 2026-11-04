@@ -105,6 +105,35 @@ For tasks that explicitly authorize live homelab access, use the Codex environme
 - A new Codex task may reuse this access only when it is started in a published environment that contains the required SSH/access setup. Repository instructions alone do not provide credentials.
 - Documentation-only tasks remain subject to the rule above: do not connect to the live homelab unless the task explicitly authorizes it.
 
+
+### Verified off-LAN operator path — 2026-11-04
+
+The Infrastructure specialist recorded **NordVPN Meshnet** on the Windows
+notebook and Ubuntu Homelab, with **interactive SSH accepted from the tested
+mobile hotspot only**: 10 consecutive successful TCP/SSH checks, plus 3 after
+hotspot reconnect. An earlier intermittent timeout remains unexplained; other
+networks and unattended reliability are **not** accepted. Consult the current
+[Infrastructure workstream state](.project/workstreams/infrastructure.yaml)
+(`remote_access_issue_41`) and [Issue #41](https://github.com/igormego/homelab-infrastructure/issues/41)
+for current evidence before treating the route as available.
+
+**Owner-chat discovery:** Plex/Media and other specialists share this repository's
+Codex routing rules, but do not automatically inherit each other's live
+ChatGPT conversation state. Read this `AGENTS.md` and the appropriate
+`.project/workstreams/*.yaml` before choosing a task lane. For an authorized
+live Homelab operation from off-LAN, use **Codex Desktop Local**
+(`local-homelab-admin`) with the **existing separate machine-local Meshnet SSH
+alias** already configured by the operator. Do not assume `ssh homelab`
+uses Meshnet; it is the existing LAN alias. Verify the selected alias via
+a non-mutating authenticated probe before live work. Never infer or publish its
+private HostName, peer address, SSH key, username or host-key details; do not
+edit SSH/network configuration merely because an alias is unavailable.
+
+The user's normal ChatGPT/GitHub connector and published Codex Cloud environment
+do **not** inherit the notebook's Meshnet connection or administrative SSH key.
+This remote path enables connectivity only, not new Codex/agent permissions or
+unattended host operations.
+
 ## Documentation style
 
 - Write public documentation in English.
