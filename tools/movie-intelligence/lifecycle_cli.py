@@ -5,6 +5,7 @@ does not authorize writes and cannot produce Plex/ARR/Seerr mutations.
 """
 import argparse
 from collections import Counter
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -96,6 +97,38 @@ def snapshot(*, db_path, plex, radarr, movies_id, archive_id):
             plex_listing(plex,movies_id),plex_listing(plex,archive_id))
 
 
+
+def archived_receipts(directory):
+    """Read only complete, hash-verified private archive receipts, never adopt foreign files."""
+    if not directory:
+        return {}
+    root=Path(directory)
+    if not root.is_absolute() or root.is_symlink() or not root.is_dir() or root.stat().st_mode & 0o077:
+        raise ValueError("unsafe_receipt_directory")
+    receipts={}
+    for p in root.glob("*.json"):
+        if not p.stem.isdecimal() or p.is_symlink() or not p.is_file() or p.stat().st_size>65536:
+            raise ValueError("unsafe_receipt_file")
+        if p.stat().st_mode & 0o077:
+            raise ValueError("unsafe_receipt_permissions")
+        tmdb=int(p.stem)
+        if tmdb in receipts or len(receipts)>MAX_RECORDS:
+            raise ValueError("duplicate_archive_receipt")
+        data=json.loads(p.read_text())
+        if data.get("stage") != "verified" or (data.get("identity") or {}).get("tmdb") != tmdb:
+            continue
+        target=Path(data.get("file",""))
+        if not target.is_absolute() or target.is_symlink() or not target.is_file() or (
+                target.stat().st_size>2*1024*1024):
+            continue
+        if hashlib.sha256(target.read_bytes()).hexdigest()!=data.get("sha256"):
+            continue
+        if not isinstance((data.get("verified") or {}).get("rating_key"), (str,int)):
+            continue
+        receipts[tmdb]=data
+    return receipts
+
+
 def build_report(catalog,radarr_movies,movies,archive,receipts=None,limit=30):
     # receipts are independently validated archive receipts supplied by the
     # private owner workflow. Absent receipts deliberately trigger needs_review
@@ -126,7 +159,8 @@ def main():
     data=snapshot(db_path=need("MOVIE_DB_PATH"),plex=plex,radarr=radarr,
                   movies_id=int(need("PLEX_MOVIES_LIBRARY_ID")),
                   archive_id=int(need("PLEX_ARCHIVE_LIBRARY_ID")))
-    print(json.dumps(build_report(*data,limit=args.limit),ensure_ascii=False))
+    receipts=archived_receipts(os.environ.get('MY_CINEMA_ARCHIVE_STATE_DIR'))
+    print(json.dumps(build_report(*data,receipts=receipts,limit=args.limit),ensure_ascii=False))
 
 
 if __name__=="__main__":
