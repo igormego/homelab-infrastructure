@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
       - name: Run My Cinema lifecycle planner tests
         working-directory: tools/movie-intelligence
-        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_lifecycle.py'
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_lifecycle*.py'
       - name: Run offline Movie Intelligence tests
         working-directory: tools/movie-intelligence
         env:
