@@ -173,3 +173,28 @@ Future states:
 No transition is automated in v0.1. Never delete a real movie file, infer watched
 state from Radarr monitoring, or synthesize Plex history. Future lifecycle work
 must distinguish owned placeholders from real media and retain identity/receipts.
+
+## Bounded multi-movie orchestration (source-only)
+
+[archive_batch.py](archive_batch.py) composes the existing single-film
+`Archive.plan_archive_movie` / `Archive.archive_movie` APIs. It does not
+install a service or scheduler, create a new media writer, or bypass the
+per-film execution allowlist and durable receipt. Each invocation is at most
+10 distinct, sorted positive TMDb IDs (default maximum 5).
+
+`plan_archive_batch(controller, ids)` is read-only. It returns a batch SHA-256
+fingerprint binding exactly the planned IDs, decisions and single-film
+fingerprints. A single blocked, ambiguous or uncertain plan prevents the
+batch from executing. `execute_archive_batch(..., execute=True,
+reviewed_batch_fingerprint=...)` re-plans the whole batch, checks the exact
+fingerprint, then re-plans each movie immediately before invoking the existing
+single-film writer. Each successful operation is independently confirmed by
+that writer; the first uncertain or failed result stops later movies.
+
+There is no silent retry, lock expiry, fallback, Plex trash cleanup or
+automatic historical backfill. The user has not approved an actual batch of
+IDs and **no live batch has run**. This source gate is intended for later
+small owner-reviewed batches after host-level runtime acceptance. A process
+crash after a subset has been created requires a new plan for only remaining
+candidates; existing per-film receipts prevent duplicate publication.
+
