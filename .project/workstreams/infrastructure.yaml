@@ -194,13 +194,15 @@ backup_issue_33:
   issue: "https://github.com/igormego/homelab-infrastructure/issues/33"
   verified:
     - "Authenticated read-only Meshnet SSH succeeded from the operator's external network."
-    - "Thirteen active containers were inventoried across media, monitoring, agent control and trading workloads; persistent state also includes host paths and three named Docker volumes."
-    - "A separate approximately 2 TB USB disk with an unmounted NTFS partition is present; its identity as the historical rollback disk, contents, health, writable capacity and suitability are unverified."
-    - "Visible non-media application directories total roughly 19 GiB excluding selected caches; this is an incomplete estimate and does not include all privileged host state."
+    - "Thirteen active containers were inventoried across media, monitoring, agent control and trading workloads; persistent state includes host paths and three named Docker volumes."
+    - "The approximately 2 TB USB NTFS candidate was distinguished from system and production disks and its device and volume identities revalidated privately."
+    - "With explicit owner approval, the candidate was mounted read-only with no recovery and restrictive flags, inspected, and successfully unmounted; unmounted state was independently verified."
+    - "The filesystem reported 60354023424 bytes available, approximately 56.2 GiB. Directory indicators include media, application and backup-related names; historical rollback identity and contents are not positively established."
+    - "Visible non-media application directories total roughly 19 GiB excluding selected caches; this is an incomplete estimate and excludes some privileged host state."
     - "SQLite-related database and WAL files exist in several application and agent state directories; a consistent snapshot method and isolated restore have not been tested."
     - "No noninteractive sudo is available; rsync, sqlite3 and gpg are installed, but restic and borg were not found on PATH."
   backup_executed: false
   restore_tested: false
-  blocker: "No independently verified writable separate destination: the candidate NTFS disk is unmounted, its identity and existing rollback contents are unverified, and no mount change was authorized."
-  exact_next_action: "Obtain owner approval for a narrowly scoped read-only inspection of the candidate disk and interactive privilege, or identify a different approved separate backup destination; preserve all existing data."
-  remaining_prerequisites: "Verify physical disk identity, health, free capacity and existing contents; define complete application-aware snapshots, encrypted versioned repository, off-disk key recovery and isolated restoration before any backup write."
+  blocker: "The disk contains pre-existing material and its identity and safe writable disposition are unverified; the authorized inspection did not approve a backup write."
+  exact_next_action: "Prepare and separately approve a safe destination/write plan or select a different approved separate disk; preserve existing data and verify health, complete capacity estimate and recovery-key custody."
+  remaining_prerequisites: "Verify disk health and rollback identity, complete application-aware snapshot coverage, an encrypted versioned repository and off-disk key recovery, and isolated restore before accepting a backup."
