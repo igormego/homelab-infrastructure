@@ -1,0 +1,27 @@
+# Issue 33 backup prototype
+
+**Draft: production execution is disabled.** No production backup or full
+restore has been performed. Do not remove the execution guard until writer
+quiescence, recovery after interruption and an isolated application restore
+using the actual restored state have been reviewed and tested.
+
+This prototype uses a private host manifest, verifies the USB identity and
+streams archives through GPG. It attempts to restart previously running
+services after failures. Uncatchable interruption during USB access can leave
+the disk mounted; a host power loss cannot be repaired by a process watchdog.
+Encrypted staging and incomplete generations may remain after failure.
+
+The synthetic network-isolated Radarr startup and in-memory checks of restored
+SQLite and configuration are separate component tests, not an end-to-end
+restore of the actual service. Host-wide consistency is not yet proven.
+
+Before a future approved run, generate a strong recovery phrase and store it
+in a password manager available independently of both the server and disk,
+or write it on paper and keep it in a secure separate location. Verify access
+independently. Never put the phrase in command arguments, environment variables,
+logs, shell history or GitHub. A later run additionally requires specific owner
+approval for service interruption, writable mount and backup generation.
+
+Run the synthetic unit tests with `python -m unittest discover -s . -p
+'test_*.py'`. An actual restore requires a separately approved, isolated Linux
+environment and protection for any decrypted credentials.
