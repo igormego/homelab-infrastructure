@@ -201,9 +201,10 @@ backup_issue_33:
     - "Available USB capacity rose from 60354023424 to 1994637148160 bytes, approximately 1857.65 GiB. The disk was unmounted after cleanup. Basic SCSI SMART reported pass; detailed USB passthrough remains incomplete."
     - "A 10 percent allowance plus 5 GiB reserve gives a planning scenario of 44.78 GiB for one generation; this is not a proven upper bound or authorization to write."
     - "The owner reported no safe recovery-passphrase storage currently available off host and off the candidate disk."
+    - "Draft PR 49 contains a component-tested encrypted backup prototype; production execution is disabled. Sixteen local tests and synthetic encryption, integrity and isolated application startup tests passed. The actual stateful application restore and whole-host consistency are not established."
   backup_executed: false
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "No owner-confirmed secure off-host recovery-passphrase custody is available for the encrypted generation."
-  exact_next_action: "Establish and independently verify off-host recovery-passphrase custody; then review the private proposed first-write and maintenance-window scope for explicit authorization."
+  blocker: "The isolated application restore with actual state and complete writer consistency are not established; off-host recovery-passphrase custody is also unconfirmed."
+  exact_next_action: "Complete and review PR 49, including isolated actual-state restore and writer consistency; independently verify off-host phrase custody before seeking approval for the first backup and maintenance window."
   remaining_prerequisites: "Review and test executable implementation, source and writer completeness, runtime capacity guards and isolated restore; separately approve writable mount, new generation and necessary service quiescence."
