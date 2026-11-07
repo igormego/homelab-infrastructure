@@ -79,6 +79,52 @@ class ProfileTests(unittest.TestCase):
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_recovery_refuses_same_boot_before_any_restart(self):
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
+                  "containers": {n: "b" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
+        with mock.patch.object(b, "current_boot_id", return_value="a" * 36), \
+             mock.patch.object(b, "restore_recorded_services") as restore:
+            with self.assertRaisesRegex(b.Stop, "reboot required"):
+                b.recovery_preflight(record, "fixture", Path("fixture"))
+            restore.assert_not_called()
+
+    def test_delayed_stop_client_blocks_recovery(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as tmp:
+            proc = Path(tmp) / "123"; proc.mkdir()
+            (proc / "cmdline").write_bytes(b"/usr/bin/docker\0stop\0fixture\0")
+            with self.assertRaisesRegex(b.Stop, "process still running"):
+                b.require_no_stop_clients(Path(tmp))
+            (proc / "cmdline").write_bytes(b"/usr/bin/docker\0inspect\0fixture\0")
+            b.require_no_stop_clients(Path(tmp))
+
+    def test_recovery_refuses_mounted_usb(self):
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
+                  "containers": {n: "b" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
+        with mock.patch.object(b, "current_boot_id", return_value="b" * 36), \
+             mock.patch.object(b, "require_no_stop_clients"), \
+             mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
+             mock.patch.object(b, "run", return_value=b""), \
+             mock.patch.object(b, "check_disk", side_effect=b.Stop("candidate partition is already mounted")):
+            with self.assertRaisesRegex(b.Stop, "already mounted"):
+                b.recovery_preflight(record, "fixture", Path("fixture"))
+
+    def test_recovery_preflight_after_reboot_requires_settled_state(self):
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
+                  "containers": {n: "b" * 64 for n in b.EXPECTED_CONTAINERS}, "units": ["cron.service"]}
+        def inspect(argv):
+            return [{"Id": "b" * 64, "Name": "/" + argv[-1], "State": {"Status": "exited"}}]
+        def command(argv):
+            return b'inactive\n' if 'show' in argv else b''
+        with mock.patch.object(b, "current_boot_id", return_value="b" * 36), \
+             mock.patch.object(b, "require_no_stop_clients") as clients, \
+             mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
+             mock.patch.object(b, "run", side_effect=command), \
+             mock.patch.object(b, "check_disk") as disk, \
+             mock.patch.object(b, "docker_inspect", side_effect=inspect):
+            b.recovery_preflight(record, "fixture", Path("fixture"))
+        self.assertEqual(clients.call_count, 2)
+        disk.assert_called_once()
+
     def test_catchable_signal_waits_for_stop_to_settle(self):
         handlers = {}
         events = []
@@ -98,7 +144,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(events, ["stop-started", "stop-finished"])
 
     def test_recovery_record_rejects_unapproved_units_and_ids(self):
-        record = {"version": 1, "uid": 1000,
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
                   "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS}, "units": [b.USER_TIMER]}
         b.validate_recovery_record(record)
         record["units"] = ["ssh.service"]
@@ -106,7 +152,7 @@ class RecoveryTests(unittest.TestCase):
             b.validate_recovery_record(record)
 
     def test_recorded_recovery_checks_all_identities_before_any_restart(self):
-        record = {"version": 1, "uid": 1000,
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
                   "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
         with mock.patch.object(b, "docker_inspect", return_value=[{"Id": "b" * 64, "Name": "/radarr"}]), \
              mock.patch.object(b.Quiescence, "restore") as restart:
@@ -119,7 +165,7 @@ class RecoveryTests(unittest.TestCase):
             b.validate_recovery_record(record)
 
     def test_recorded_recovery_uses_only_saved_services(self):
-        record = {"version": 1, "uid": 1000,
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
                   "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS},
                   "units": ["cron.service", b.USER_TIMER]}
         def inspect(argv):
@@ -191,7 +237,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(running, set(b.EXPECTED_CONTAINERS))
         self.assertTrue(all(units[x] for x in (*b.SYSTEM_TIMERS, *b.SYSTEM_SERVICES, b.USER_TIMER)))
 
-    def test_uncertain_stop_also_restarts_the_container(self):
+    def test_uncertain_stop_does_not_race_with_recovery(self):
         containers, running, units, active, run = self.fake_world("radarr", fail_after_stop=True)
         with mock.patch.object(b, "active", side_effect=active), mock.patch.object(b, "run", side_effect=run), \
              mock.patch.object(b, "require_idle_cron"), mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
@@ -200,8 +246,7 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(b.Stop, "uncertain stop"):
                 with b.Quiescence(1000, "fixture", containers):
                     self.fail("must not archive after failed stop")
-        self.assertEqual(running, set(b.EXPECTED_CONTAINERS))
-        self.assertTrue(all(units[x] for x in (*b.SYSTEM_TIMERS, *b.SYSTEM_SERVICES, b.USER_TIMER)))
+        self.assertNotEqual(running, set(b.EXPECTED_CONTAINERS))
 
     def test_existing_destination_is_never_overwritten(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as tmp, mock.patch.object(b.os, "O_NOFOLLOW", 0, create=True):
