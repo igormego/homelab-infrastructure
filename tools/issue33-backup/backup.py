@@ -267,7 +267,7 @@ def persistent_tree_fingerprint(home, volume_roots):
 
 def create_recovery_record(path, uid, containers, units):
     """Durably claim a transaction before stopping anything; never overwrite."""
-    record = {"version": 1, "uid": uid,
+    record = {"version": 2, "uid": uid, "boot_id": current_boot_id(),
               "containers": {name: containers[name]["Id"] for name in sorted(containers)},
               "units": sorted(units)}
     validate_recovery_record(record)
@@ -287,9 +287,9 @@ def create_recovery_record(path, uid, containers, units):
 
 
 def validate_recovery_record(record):
-    if not isinstance(record, dict) or set(record) != {"version", "uid", "containers", "units"}:
+    if not isinstance(record, dict) or set(record) != {"version", "uid", "boot_id", "containers", "units"}:
         raise Stop("invalid recovery record")
-    if record["version"] != 1 or type(record["uid"]) is not int or record["uid"] <= 0:
+    if record["version"] != 2 or type(record["uid"]) is not int or record["uid"] <= 0 or not re.fullmatch(r"[0-9a-f-]{36}", str(record["boot_id"])):
         raise Stop("invalid recovery record")
     containers, units = record["containers"], record["units"]
     if not isinstance(containers, dict) or set(containers) != EXPECTED_CONTAINERS:
@@ -318,6 +318,13 @@ def load_recovery_record(path, owner=0):
         os.close(fd)
 
 
+def current_boot_id():
+    value = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+    if not re.fullmatch(r"[0-9a-f-]{36}", value):
+        raise Stop("cannot establish current boot identity")
+    return value
+
+
 def stop_with_deferred_signals(argv):
     """Finish a submitted stop before acting on a catchable interruption."""
     pending = []
@@ -341,6 +348,7 @@ class Quiescence:
         self.containers = containers
         self.units = []
         self.entered = False
+        self.stop_uncertain = False
         self.guard_pid = None
         self.guard_fd = None
 
@@ -366,8 +374,8 @@ class Quiescence:
                     os.close(null)
                 message = os.read(r, 1)
                 os.close(r)
-                if message != b"D":
-                    self.restore()
+                # Parent death leaves the durable record for operator recovery.
+                # A detached docker stop may still be active in the daemon.
                 os._exit(0)
             except BaseException:
                 os._exit(1)
@@ -403,9 +411,13 @@ class Quiescence:
             for cmd, unit in self.units:
                 if unit == "cron.service":
                     require_idle_cron()
+                self.stop_uncertain = True
                 stop_with_deferred_signals([*cmd, "stop", unit])
+                self.stop_uncertain = False
             for name in sorted(self.containers):
+                self.stop_uncertain = True
                 stop_with_deferred_signals(["docker", "stop", "--time", "60", self.containers[name]["Id"]])
+                self.stop_uncertain = False
             remaining = run(["docker", "ps", "-q"]).decode().split()
             if remaining:
                 raise Stop("a container is still running after quiescence")
@@ -415,8 +427,9 @@ class Quiescence:
         except BaseException:
             restored = False
             try:
-                self.restore()
-                restored = True
+                if not self.stop_uncertain:
+                    self.restore()
+                    restored = True
             finally:
                 self.finish_guard(restored)
             raise
@@ -501,6 +514,77 @@ def restore_recorded_services(record, username):
                       for unit in record["units"]]
     recovery.entered = True
     recovery.restore()
+
+
+def require_no_stop_clients(proc_root=Path('/proc')):
+    """Reject visible service-management clients; inaccessible state is unknown."""
+    for entry in proc_root.iterdir():
+        if not entry.name.isdecimal():
+            continue
+        try:
+            data = (entry / 'cmdline').read_bytes()
+        except FileNotFoundError:
+            continue  # process exited during enumeration
+        except OSError as error:
+            raise Stop("cannot inspect running stop clients") from error
+        argv = [os.fsdecode(part) for part in data.split(b'\0') if part]
+        if not argv:
+            continue
+        executable = Path(argv[0]).name
+        if executable in {'docker', 'systemctl', 'docker-compose'} and any(
+                token in {'stop', 'kill', 'restart', 'down', 'rm'} for token in argv[1:]):
+            raise Stop("service-management process still running; operator reconciliation required")
+
+
+def recovery_preflight(record, username, home):
+    validate_recovery_record(record)
+    if current_boot_id() == record['boot_id']:
+        raise Stop("reboot required before recovery: an earlier stop request may still be pending")
+    require_no_stop_clients()
+    userctl = user_systemctl(record['uid'], username)
+    for cmd in (["systemctl"], userctl):
+        if run([*cmd, 'list-jobs', '--no-legend', '--plain']).strip():
+            raise Stop("systemd has pending jobs; operator reconciliation required")
+    check_disk(home, record['uid'])  # requires the identified USB volume to be unmounted
+    for name, expected in record['containers'].items():
+        found = docker_inspect(['inspect', name])
+        if len(found) != 1 or found[0].get('Id') != expected or found[0].get('Name') != '/' + name:
+            raise Stop("recorded container identity changed; operator reconciliation required")
+        if found[0].get('State', {}).get('Status') not in ('running', 'exited'):
+            raise Stop("container state is not settled; operator reconciliation required")
+    for unit in record['units']:
+        cmd = userctl if unit == USER_TIMER else ['systemctl']
+        state = run([*cmd, 'show', unit, '--property=ActiveState', '--value']).decode().strip()
+        if state not in ('active', 'inactive', 'failed'):
+            raise Stop("recorded service state is not settled; operator reconciliation required")
+    require_no_stop_clients()
+
+
+def operator_recovery(record_path):
+    if pwd is None or os.geteuid() != 0 or not sys.stdin.isatty():
+        raise Stop("recovery requires root in an interactive operator TTY")
+    verify_root_owned_script()
+    lock = acquire_lock()
+    try:
+        directory = os.lstat(Path(record_path).parent)
+        if not stat.S_ISDIR(directory.st_mode) or directory.st_uid != 0 or stat.S_IMODE(directory.st_mode) != 0o700:
+            raise Stop("unsafe recovery directory")
+        uid = int(os.environ.get('SUDO_UID', '0'))
+        if uid <= 0:
+            raise Stop("recovery must be invoked by the trusted operator through sudo")
+        record = load_recovery_record(record_path)
+        if record['uid'] != uid:
+            raise Stop("recovery record belongs to a different operator")
+        user = pwd.getpwuid(uid)
+        recovery_preflight(record, user.pw_name, Path(user.pw_dir))
+        if input('Type RECOVER to restart previously active services without a backup: ').strip() != 'RECOVER':
+            raise Stop("operator declined service recovery")
+        # Recheck after operator input, so a new job cannot be silently ignored.
+        recovery_preflight(record, user.pw_name, Path(user.pw_dir))
+        restore_recorded_services(record, user.pw_name)
+        print('SERVICES_RECOVERED: pending record retained; reconcile the USB generation before any future backup.')
+    finally:
+        os.close(lock)
 
 
 def archive_specs(volume_roots):
@@ -854,9 +938,15 @@ def verify_generation(path, secret):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--execute", action="store_true", help="run the separately approved privileged transaction")
+    ap.add_argument("--recover-services", action="store_true", help="recover recorded services after reboot without retrying a backup")
     ap.add_argument("--generation", help="explicit new .homelab-issue33-<32 lowercase hex> directory for a later run")
     ap.add_argument("--verify-generation", help="read-only verify a mounted generation on an isolated Linux host")
     args = ap.parse_args()
+    if args.recover_services:
+        if args.execute or args.generation or args.verify_generation:
+            raise Stop("recovery cannot be combined with other actions")
+        operator_recovery(Path('/var/lib/issue33-backup/pending.json'))
+        return
     if args.verify_generation:
         if args.execute or args.generation or os.name != "posix" or not sys.stdin.isatty():
             raise Stop("verification needs a Linux operator TTY and cannot be combined with execution")
@@ -922,6 +1012,7 @@ def main():
         previous_handlers[sig] = signal.signal(sig, interrupted)
     mount_dir = None
     mounted = False
+    completed = False
     try:
         sentinel = b"issue33-recovery-test-v1"
         test = encrypt_bytes(stage, gpg_home, secret, "recovery-test.gpg", sentinel)
@@ -982,6 +1073,7 @@ def main():
             dst = generation / part.name
             copy_exclusive(part, dst)
             verify_gpg(gpg_home, secret, dst, kind)
+        completed = True
         print("SNAPSHOT_VERIFIED: encrypted parts, in-memory Radarr DB/config and synthetic isolated startup passed.")
         print("LIMITATION: Radarr did not start with the restored DB/config; whole-host restoration was not tested.")
         print("Encrypted staging and USB generation are retained; no pruning was performed.")
@@ -1000,6 +1092,14 @@ def main():
             except OSError:
                 cleanup_error = cleanup_error or "temporary mountpoint could not be removed"
         subprocess.run(["gpgconf", "--homedir", str(gpg_home), "--kill", "gpg-agent"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if completed and not cleanup_error:
+            load_recovery_record(recovery_path)
+            os.unlink(recovery_path)
+            directory_fd = os.open(str(recovery_dir), os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
         for sig, handler in previous_handlers.items():
             signal.signal(sig, handler)
         os.close(lock_fd)
