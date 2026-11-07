@@ -7,8 +7,15 @@ using the actual restored state have been reviewed and tested.
 
 This prototype uses a private host manifest, verifies the USB identity and
 streams archives through GPG. It attempts to restart previously running
-services after failures. Uncatchable interruption during USB access can leave
-the disk mounted; a host power loss cannot be repaired by a process watchdog.
+services after settled failures. An uncertain stop or process death leaves a
+durable pending record; it does not restart services automatically. After a
+reboot, an operator may run the reviewed root-owned script with
+`--recover-services` via interactive sudo. Recovery checks the saved operator,
+container identities, service states, stop clients and systemd jobs, and
+requires the identified USB volume to be unmounted. It asks for `RECOVER`,
+then starts only services recorded as previously active. The pending record is
+retained for operator reconciliation; no backup is retried or overwritten.
+Uncatchable interruption during USB access can leave the disk mounted.
 Encrypted staging and incomplete generations may remain after failure.
 
 The synthetic network-isolated Radarr startup and in-memory checks of restored
