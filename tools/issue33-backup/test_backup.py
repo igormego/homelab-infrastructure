@@ -16,6 +16,13 @@ spec.loader.exec_module(b)
 
 
 class ProfileTests(unittest.TestCase):
+    def test_unplanned_mount_is_rejected_before_archive(self):
+        b.require_accounted_root_mounts([{"target": "/", "children": [{"target": "/data"}, {"target": "/boot/efi"}]}])
+        with self.assertRaisesRegex(b.Stop, "unaccounted filesystem"):
+            b.require_accounted_root_mounts([{"target": "/", "children": [{"target": "/home"}]}])
+        with self.assertRaisesRegex(b.Stop, "topology"):
+            b.require_accounted_root_mounts([])
+
     def test_archive_scope_excludes_raw_docker_and_bulk_payloads(self):
         vols = {x: "/var/lib/docker/volumes/" + x + "/_data" for x in b.EXPECTED_VOLUMES}
         specs = dict(b.archive_specs(vols))
