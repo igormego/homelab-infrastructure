@@ -181,6 +181,28 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(running, set(containers.values()))
         self.assertEqual(started_units, {'cron.service'})
 
+    def test_reconciliation_clears_only_record_after_explicit_confirmation(self):
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
+                  "containers": {n: 'b' * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
+        metadata = mock.Mock(st_mode=0o40700, st_uid=0)
+        user = mock.Mock(pw_name='fixture', pw_dir='/fixture')
+        with mock.patch.object(b, 'pwd', mock.Mock(getpwuid=mock.Mock(return_value=user))), \
+             mock.patch.object(b.os, 'geteuid', return_value=0, create=True), \
+             mock.patch.object(b.sys.stdin, 'isatty', return_value=True), \
+             mock.patch.dict(b.os.environ, {'SUDO_UID': '1000'}), \
+             mock.patch.object(b.os, 'lstat', return_value=metadata), \
+             mock.patch.object(b.os, 'close'), mock.patch.object(b.os, 'open', return_value=98), \
+             mock.patch.object(b.os, 'fsync'), mock.patch.object(b.os, 'O_DIRECTORY', 0, create=True), \
+             mock.patch.object(b.os, 'unlink') as unlink, mock.patch.object(b, 'verify_root_owned_script'), \
+             mock.patch.object(b, 'acquire_lock', return_value=99), \
+             mock.patch.object(b, 'load_recovery_record', return_value=record), \
+             mock.patch.object(b, 'recovery_preflight'), mock.patch.object(b, 'restore_recorded_services'), \
+             mock.patch.object(b, 'docker_inspect', return_value=[{'State': {'Running': True}}]), \
+             mock.patch.object(b, 'user_systemctl', return_value=['userctl']), \
+             mock.patch('builtins.input', side_effect=['RECOVER', 'RECONCILED']), mock.patch('builtins.print'):
+            b.operator_recovery(Path('/fixture/pending.json'))
+        unlink.assert_called_once_with(Path('/fixture/pending.json'))
+
     def test_catchable_signal_waits_for_stop_to_settle(self):
         handlers = {}
         events = []
