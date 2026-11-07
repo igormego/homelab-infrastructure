@@ -118,6 +118,20 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(b.Stop, "identity"):
             b.validate_recovery_record(record)
 
+    def test_recorded_recovery_uses_only_saved_services(self):
+        record = {"version": 1, "uid": 1000,
+                  "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS},
+                  "units": ["cron.service", b.USER_TIMER]}
+        def inspect(argv):
+            return [{"Id": "a" * 64, "Name": "/" + argv[-1]}]
+        with mock.patch.object(b, "docker_inspect", side_effect=inspect), \
+             mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
+             mock.patch.object(b.Quiescence, "restore", autospec=True) as restore:
+            b.restore_recorded_services(record, "fixture")
+        recovery = restore.call_args.args[0]
+        self.assertEqual(recovery.units, [(["systemctl"], "cron.service"), (["userctl"], b.USER_TIMER)])
+        self.assertTrue(recovery.entered)
+
     @unittest.skipUnless(os.name == "posix" and hasattr(os, "O_NOFOLLOW"), "requires Linux filesystem semantics")
     def test_recovery_record_is_durable_exclusive_and_rejects_symlink(self):
         with tempfile.TemporaryDirectory() as tmp:
