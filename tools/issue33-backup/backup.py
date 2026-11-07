@@ -647,6 +647,17 @@ def synthetic_radarr_smoke(image):
             time.sleep(2)
         raise Stop("isolated synthetic Radarr failed to start")
     finally:
+        if not cid:
+            # The Docker client can fail after the daemon created the fixture.
+            # The random exact name plus label prevents touching other containers.
+            found = run(["docker", "ps", "-aq", "--no-trunc", "--filter", "name=^/" + name + "$",
+                         "--filter", "label=issue33.synthetic=1"]).decode().split()
+            if len(found) > 1:
+                raise Stop("CRITICAL: synthetic fixture ownership is ambiguous")
+            if found:
+                cid = found[0]
+        if cid and not re.fullmatch(r"[0-9a-f]{64}", cid):
+            raise Stop("CRITICAL: synthetic fixture ID is invalid")
         if cid and re.fullmatch(r"[0-9a-f]{64}", cid):
             meta = docker_inspect(["inspect", cid])
             if len(meta) != 1 or meta[0].get("Config", {}).get("Labels", {}).get("issue33.synthetic") != "1":
