@@ -16,6 +16,15 @@ spec.loader.exec_module(b)
 
 
 class ProfileTests(unittest.TestCase):
+    def test_orphaned_cron_process_blocks_quiescence(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as tmp:
+            group = Path(tmp)
+            (group / 'cgroup.procs').write_text('100\n200\n', encoding='ascii')
+            with self.assertRaisesRegex(b.Stop, 'in-flight job'):
+                b.require_empty_cron_cgroup(group, allowed={'100'}, must_exist=True)
+            (group / 'cgroup.procs').write_text('100\n', encoding='ascii')
+            b.require_empty_cron_cgroup(group, allowed={'100'}, must_exist=True)
+
     def test_unplanned_mount_is_rejected_before_archive(self):
         b.require_accounted_root_mounts([{"target": "/", "children": [{"target": "/data"}, {"target": "/boot/efi"}]}])
         with self.assertRaisesRegex(b.Stop, "unaccounted filesystem"):
@@ -124,6 +133,49 @@ class RecoveryTests(unittest.TestCase):
             b.recovery_preflight(record, "fixture", Path("fixture"))
         self.assertEqual(clients.call_count, 2)
         disk.assert_called_once()
+
+    def test_operator_recovery_restarts_saved_services_without_backup(self):
+        containers = {n: hashlib.sha256(n.encode()).hexdigest() for n in b.EXPECTED_CONTAINERS}
+        record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
+                  "containers": containers, "units": ["cron.service"]}
+        running = set()
+        started_units = set()
+        def inspect(argv):
+            name = argv[-1]
+            return [{"Id": containers[name], "Name": "/" + name, "State": {"Status": "exited"}}]
+        def command(argv):
+            if 'list-jobs' in argv: return b''
+            if 'show' in argv: return b'inactive\n'
+            if argv[:2] == ['docker', 'inspect']:
+                return b'true' if argv[-1] in running else b'false'
+            if argv[:2] == ['docker', 'start']:
+                running.add(argv[-1]); return b''
+            if 'start' in argv:
+                started_units.add(argv[-1]); return b''
+            raise AssertionError(argv)
+        metadata = mock.Mock(st_mode=0o40700, st_uid=0)
+        user = mock.Mock(pw_name='fixture', pw_dir='/fixture')
+        with mock.patch.object(b, 'pwd', mock.Mock(getpwuid=mock.Mock(return_value=user))), \
+             mock.patch.object(b.os, 'geteuid', return_value=0, create=True), \
+             mock.patch.object(b.sys.stdin, 'isatty', return_value=True), \
+             mock.patch.dict(b.os.environ, {'SUDO_UID': '1000'}), \
+             mock.patch.object(b.os, 'lstat', return_value=metadata), \
+             mock.patch.object(b.os, 'close'), mock.patch.object(b, 'verify_root_owned_script'), \
+             mock.patch.object(b, 'acquire_lock', return_value=99), \
+             mock.patch.object(b, 'load_recovery_record', return_value=record), \
+             mock.patch.object(b, 'current_boot_id', return_value='b' * 36), \
+             mock.patch.object(b, 'require_no_stop_clients'), mock.patch.object(b, 'check_disk'), \
+             mock.patch.object(b, 'user_systemctl', return_value=['userctl']), \
+             mock.patch.object(b, 'docker_inspect', side_effect=inspect), \
+             mock.patch.object(b, 'run', side_effect=command), \
+             mock.patch.object(b, 'active', side_effect=lambda cmd, unit: unit in started_units), \
+             mock.patch.object(b.signal, 'SIGHUP', 1, create=True), \
+             mock.patch.object(b.signal, 'signal', return_value=None), \
+             mock.patch('builtins.input', return_value='RECOVER'), \
+             mock.patch('builtins.print'):
+            b.operator_recovery(Path('/fixture/pending.json'))
+        self.assertEqual(running, set(containers.values()))
+        self.assertEqual(started_units, {'cron.service'})
 
     def test_catchable_signal_waits_for_stop_to_settle(self):
         handlers = {}
