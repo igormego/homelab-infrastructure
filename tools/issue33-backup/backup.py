@@ -430,6 +430,23 @@ def archive_specs(volume_roots):
     return specs
 
 
+def require_accounted_root_mounts(tree):
+    """Fail closed if one-file-system would silently omit an unplanned mount."""
+    excluded = ("/data", "/boot", "/var/lib/docker", "/proc", "/sys",
+                "/dev", "/run", "/tmp", "/var/tmp")
+    def visit(nodes):
+        for node in nodes:
+            target = node.get("target")
+            if not isinstance(target, str) or not target.startswith("/"):
+                raise Stop("cannot establish root mount topology")
+            if target != "/" and not any(target == p or target.startswith(p + "/") for p in excluded):
+                raise Stop("unaccounted filesystem would be omitted from root archive")
+            visit(node.get("children", []))
+    if not isinstance(tree, list) or len(tree) != 1 or tree[0].get("target") != "/":
+        raise Stop("cannot establish root mount topology")
+    visit(tree)
+
+
 def start_gpg(home, secret, action, output=None, source=None):
     r, w = os.pipe()
     cmd = ["gpg", "--no-options", "--homedir", str(home), "--batch", "--yes", "--no-tty",
@@ -808,6 +825,8 @@ def main():
         volume_roots = {v["name"]: f"/var/lib/docker/volumes/{v['name']}/_data" for v in profile["volumes"]}
         parts = []
         with Quiescence(uid, user.pw_name, containers):
+            mount_tree = json.loads(run(["findmnt", "-J", "-R", "-o", "TARGET", "/"]))
+            require_accounted_root_mounts(mount_tree.get("filesystems"))
             require_no_writers(home, volume_roots)
             before = persistent_tree_fingerprint(home, volume_roots)
             for name, argv in archive_specs(volume_roots):
