@@ -190,7 +190,7 @@ remote_access_issue_41:
 
 backup_issue_33:
   status: "Blocked"
-  last_verified: "2026-11-06"
+  last_verified: "2026-11-07"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/33"
   verified:
     - "A private owner-readable source/restore manifest records 13 active containers, three named volumes, 13 image identities, host service references, writable-layer differences and 54 database candidates; no credential values were copied into the manifest."
@@ -202,9 +202,11 @@ backup_issue_33:
     - "A 10 percent allowance plus 5 GiB reserve gives a planning scenario of 44.78 GiB for one generation; this is not a proven upper bound or authorization to write."
     - "The owner reported no safe recovery-passphrase storage currently available off host and off the candidate disk."
     - "Draft PR 49 contains a component-tested encrypted backup prototype; production execution is disabled. Sixteen local tests and synthetic encryption, integrity and isolated application startup tests passed. The actual stateful application restore and whole-host consistency are not established."
+    - "On 2026-11-07 a network-isolated disposable Radarr started with an online SQLite snapshot and actual configuration; the local API movie count matched the snapshot. No production mount was used and the fixture was removed. Temporary filesystem pages may have been swapped. This was not a restore from a backup generation or a full-host test."
+    - "PR 49 now fails closed on unaccounted root mounts and handles uncertain synthetic fixture creation. Eighteen unit tests and its GitHub Actions workflow passed; production execution remains disabled."
   backup_executed: false
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "The isolated application restore with actual state and complete writer consistency are not established; off-host recovery-passphrase custody is also unconfirmed."
-  exact_next_action: "Complete and review PR 49, including isolated actual-state restore and writer consistency; independently verify off-host phrase custody before seeking approval for the first backup and maintenance window."
+  blocker: "Whole-host writer consistency, interrupted stop recovery and restoration from the encrypted generation are not established; off-host recovery-passphrase custody remains unconfirmed."
+  exact_next_action: "Resolve writer and interruption safety and exercise isolated restoration from the encrypted-generation format in PR 49; independently verify off-host phrase custody before seeking approval for the first backup and maintenance window."
   remaining_prerequisites: "Review and test executable implementation, source and writer completeness, runtime capacity guards and isolated restore; separately approve writable mount, new generation and necessary service quiescence."
