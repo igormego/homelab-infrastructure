@@ -265,9 +265,78 @@ def persistent_tree_fingerprint(home, volume_roots):
     return tree_fingerprint(roots, {"/data/docker/media", "/data/docker/downloads"})
 
 
+def create_recovery_record(path, uid, containers, units):
+    """Durably claim a transaction before stopping anything; never overwrite."""
+    record = {"version": 1, "uid": uid,
+              "containers": {name: containers[name]["Id"] for name in sorted(containers)},
+              "units": sorted(units)}
+    validate_recovery_record(record)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        with os.fdopen(fd, "wb", closefd=False) as stream:
+            stream.write(json.dumps(record, sort_keys=True).encode())
+            stream.flush()
+            os.fsync(fd)
+    finally:
+        os.close(fd)
+    directory = os.open(str(Path(path).parent), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def validate_recovery_record(record):
+    if not isinstance(record, dict) or set(record) != {"version", "uid", "containers", "units"}:
+        raise Stop("invalid recovery record")
+    if record["version"] != 1 or type(record["uid"]) is not int or record["uid"] <= 0:
+        raise Stop("invalid recovery record")
+    containers, units = record["containers"], record["units"]
+    if not isinstance(containers, dict) or set(containers) != EXPECTED_CONTAINERS:
+        raise Stop("invalid recovery container set")
+    if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in containers.values()):
+        raise Stop("invalid recovery container identity")
+    allowed = set(SYSTEM_TIMERS + SYSTEM_SERVICES + (USER_TIMER,))
+    if not isinstance(units, list) or any(not isinstance(u, str) or u not in allowed for u in units) or len(set(units)) != len(units):
+        raise Stop("invalid recovery unit set")
+
+
+def load_recovery_record(path, owner=0):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        metadata = os.fstat(fd)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != owner or stat.S_IMODE(metadata.st_mode) != 0o600:
+            raise Stop("unsafe recovery record permissions")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            raw = stream.read(65537)
+        if len(raw) > 65536:
+            raise Stop("recovery record is too large")
+        record = json.loads(raw)
+        validate_recovery_record(record)
+        return record
+    finally:
+        os.close(fd)
+
+
+def stop_with_deferred_signals(argv):
+    """Finish a submitted stop before acting on a catchable interruption."""
+    pending = []
+    signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+    previous = {sig: signal.signal(sig, lambda number, frame: pending.append(number)) for sig in signals}
+    try:
+        run(argv)
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+    if pending:
+        raise Stop("interrupted after stop settled; automatic recovery initiated")
+
+
 class Quiescence:
     """Restore every originally running item on all catchable errors/signals."""
-    def __init__(self, uid, username, containers):
+    def __init__(self, uid, username, containers, recovery_path=None):
+        self.uid = uid
+        self.recovery_path = recovery_path
         self.userctl = user_systemctl(uid, username)
         self.containers = containers
         self.units = []
@@ -325,15 +394,18 @@ class Quiescence:
         require_idle_cron()
         candidates = [(["systemctl"], u) for u in (*SYSTEM_TIMERS, *SYSTEM_SERVICES)] + [(self.userctl, USER_TIMER)]
         self.units = [(cmd, unit) for cmd, unit in candidates if active(cmd, unit)]
+        if self.recovery_path is not None:
+            create_recovery_record(self.recovery_path, self.uid, self.containers,
+                                   [unit for _, unit in self.units])
         self.entered = True
         self.start_guard()
         try:
             for cmd, unit in self.units:
                 if unit == "cron.service":
                     require_idle_cron()
-                run([*cmd, "stop", unit])
+                stop_with_deferred_signals([*cmd, "stop", unit])
             for name in sorted(self.containers):
-                run(["docker", "stop", "--time", "60", self.containers[name]["Id"]])
+                stop_with_deferred_signals(["docker", "stop", "--time", "60", self.containers[name]["Id"]])
             remaining = run(["docker", "ps", "-q"]).decode().split()
             if remaining:
                 raise Stop("a container is still running after quiescence")
@@ -413,6 +485,22 @@ class Quiescence:
         finally:
             self.finish_guard(restored)
         return False
+
+
+def restore_recorded_services(record, username):
+    """Restore recorded active services only; never touch the USB or retry a backup."""
+    validate_recovery_record(record)
+    containers = {}
+    for name, expected_id in record["containers"].items():
+        found = docker_inspect(["inspect", name])
+        if len(found) != 1 or found[0].get("Id") != expected_id or found[0].get("Name") != "/" + name:
+            raise Stop("recorded container identity changed; operator reconciliation required")
+        containers[name] = found[0]
+    recovery = Quiescence(record["uid"], username, containers)
+    recovery.units = [((recovery.userctl if unit == USER_TIMER else ["systemctl"]), unit)
+                      for unit in record["units"]]
+    recovery.entered = True
+    recovery.restore()
 
 
 def archive_specs(volume_roots):
@@ -796,6 +884,15 @@ def main():
     user = pwd.getpwuid(uid)
     home = Path(user.pw_dir)
     os.umask(0o077)
+    recovery_dir = Path("/var/lib/issue33-backup")
+    recovery_dir.mkdir(mode=0o700, exist_ok=True)
+    recovery_stat = os.lstat(recovery_dir)
+    if not stat.S_ISDIR(recovery_stat.st_mode) or recovery_stat.st_uid != 0 or stat.S_IMODE(recovery_stat.st_mode) != 0o700:
+        raise Stop("unsafe recovery directory")
+    recovery_path = recovery_dir / "pending.json"
+    if os.path.lexists(recovery_path):
+        load_recovery_record(recovery_path)
+        raise Stop("unfinished operation requires operator recovery; no backup will be retried")
     profile, profile_bytes = select_profile(home, uid)
     generation_name = args.generation or profile.get("proposal_2026_11_06", {}).get("target", {}).get("generation_directory_at_volume_root", "")
     if not re.fullmatch(r"\.homelab-issue33-[0-9a-f]{32}", generation_name):
@@ -835,7 +932,7 @@ def main():
             raise Stop("passphrase round-trip failed")
         volume_roots = {v["name"]: f"/var/lib/docker/volumes/{v['name']}/_data" for v in profile["volumes"]}
         parts = []
-        with Quiescence(uid, user.pw_name, containers):
+        with Quiescence(uid, user.pw_name, containers, recovery_path):
             mount_tree = json.loads(run(["findmnt", "-J", "-R", "-o", "TARGET", "/"]))
             require_accounted_root_mounts(mount_tree.get("filesystems"))
             require_no_writers(home, volume_roots)
