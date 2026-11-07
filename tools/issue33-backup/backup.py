@@ -607,6 +607,23 @@ def operator_recovery(record_path):
         recovery_preflight(record, user.pw_name, Path(user.pw_dir))
         restore_recorded_services(record, user.pw_name)
         print('SERVICES_RECOVERED: pending record retained; reconcile the USB generation before any future backup.')
+        if input('After separately inspecting the USB generation, type RECONCILED to clear only the pending record, or press Enter to keep it: ').strip() == 'RECONCILED':
+            recovery_preflight(record, user.pw_name, Path(user.pw_dir))
+            for name in record['containers']:
+                if docker_inspect(['inspect', name])[0].get('State', {}).get('Running') is not True:
+                    raise Stop("a recorded container is no longer running; pending record retained")
+            userctl = user_systemctl(uid, user.pw_name)
+            if any(not active(userctl if unit == USER_TIMER else ['systemctl'], unit) for unit in record['units']):
+                raise Stop("a recorded service is no longer active; pending record retained")
+            if load_recovery_record(record_path) != record:
+                raise Stop("recovery record changed; operator reconciliation required")
+            os.unlink(record_path)
+            directory_fd = os.open(str(Path(record_path).parent), os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            print('RECOVERY_RECORD_CLEARED: no backup was retried.')
     finally:
         os.close(lock)
 
