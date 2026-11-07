@@ -220,6 +220,25 @@ class RecoveryTests(unittest.TestCase):
         self.assertNotIn("--volume", seen[0]); self.assertNotIn("--mount", seen[0])
         self.assertEqual(seen[-1], ["docker", "rm", "--force", cid])
 
+    def test_isolated_fixture_removed_after_uncertain_create(self):
+        cid = "a" * 64
+        seen = []
+        def run(argv, **kwargs):
+            seen.append(argv)
+            if argv[:2] == ["docker", "run"]:
+                raise b.Stop("simulated client failure")
+            if argv[:2] == ["docker", "ps"]:
+                return (cid + "\n").encode()
+            if argv[:3] == ["docker", "rm", "--force"]:
+                return b""
+            raise AssertionError(argv)
+        meta = [{"Config": {"Labels": {"issue33.synthetic": "1"}}}]
+        with mock.patch.object(b, "run", side_effect=run), mock.patch.object(b, "docker_inspect", return_value=meta):
+            with self.assertRaisesRegex(b.Stop, "client failure"):
+                b.synthetic_radarr_smoke("sha256:" + "b" * 64)
+        self.assertIn("--no-trunc", seen[1])
+        self.assertEqual(seen[-1], ["docker", "rm", "--force", cid])
+
 
 if __name__ == "__main__":
     unittest.main()
