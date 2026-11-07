@@ -201,6 +201,27 @@ def require_idle_cron():
             raise Stop("cron has an in-flight job")
         if p.returncode != 1:
             raise Stop("cannot check cron children")
+    group = run(["systemctl", "show", "cron.service", "--property=ControlGroup", "--value"]).decode().strip()
+    if group != "/system.slice/cron.service":
+        raise Stop("cannot establish cron cgroup")
+    path = Path("/sys/fs/cgroup") / group.lstrip("/")
+    require_empty_cron_cgroup(path, allowed={pid} if pid != "0" else set(), must_exist=True)
+    return path
+
+
+def require_empty_cron_cgroup(path, allowed=frozenset(), must_exist=False):
+    if not path.exists():
+        if must_exist:
+            raise Stop("cannot inspect cron cgroup")
+        return
+    try:
+        entries = [path / "cgroup.procs", *path.rglob("*/cgroup.procs")]
+        for entry in entries:
+            for pid in entry.read_text(encoding="ascii").split():
+                if not pid.isdecimal() or pid not in allowed:
+                    raise Stop("cron cgroup contains an in-flight job")
+    except OSError as error:
+        raise Stop("cannot inspect cron cgroup") from error
 
 
 def has_open_writer(lsof_output):
@@ -409,11 +430,14 @@ class Quiescence:
         self.start_guard()
         try:
             for cmd, unit in self.units:
+                cron_group = None
                 if unit == "cron.service":
-                    require_idle_cron()
+                    cron_group = require_idle_cron()
                 self.stop_uncertain = True
                 stop_with_deferred_signals([*cmd, "stop", unit])
                 self.stop_uncertain = False
+                if cron_group is not None:
+                    require_empty_cron_cgroup(cron_group)
             for name in sorted(self.containers):
                 self.stop_uncertain = True
                 stop_with_deferred_signals(["docker", "stop", "--time", "60", self.containers[name]["Id"]])
