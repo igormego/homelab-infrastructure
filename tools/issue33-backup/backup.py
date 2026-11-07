@@ -361,7 +361,7 @@ def stop_with_deferred_signals(argv):
 
 
 class Quiescence:
-    """Restore every originally running item on all catchable errors/signals."""
+    """Restore after settled failures; retain the record for uncertain stops."""
     def __init__(self, uid, username, containers, recovery_path=None):
         self.uid = uid
         self.recovery_path = recovery_path
