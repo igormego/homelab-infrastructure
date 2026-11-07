@@ -79,6 +79,58 @@ class ProfileTests(unittest.TestCase):
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_catchable_signal_waits_for_stop_to_settle(self):
+        handlers = {}
+        events = []
+        def register(sig, handler):
+            previous = handlers.get(sig)
+            handlers[sig] = handler
+            return previous
+        def operation(argv):
+            events.append("stop-started")
+            handlers[b.signal.SIGTERM](b.signal.SIGTERM, None)
+            events.append("stop-finished")
+        with mock.patch.object(b.signal, "SIGHUP", 1, create=True), \
+             mock.patch.object(b.signal, "signal", side_effect=register), \
+             mock.patch.object(b, "run", side_effect=operation):
+            with self.assertRaisesRegex(b.Stop, "after stop settled"):
+                b.stop_with_deferred_signals(["docker", "stop", "fixture"])
+        self.assertEqual(events, ["stop-started", "stop-finished"])
+
+    def test_recovery_record_rejects_unapproved_units_and_ids(self):
+        record = {"version": 1, "uid": 1000,
+                  "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS}, "units": [b.USER_TIMER]}
+        b.validate_recovery_record(record)
+        record["units"] = ["ssh.service"]
+        with self.assertRaisesRegex(b.Stop, "unit set"):
+            b.validate_recovery_record(record)
+
+    def test_recorded_recovery_checks_all_identities_before_any_restart(self):
+        record = {"version": 1, "uid": 1000,
+                  "containers": {n: "a" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
+        with mock.patch.object(b, "docker_inspect", return_value=[{"Id": "b" * 64, "Name": "/radarr"}]), \
+             mock.patch.object(b.Quiescence, "restore") as restart:
+            with self.assertRaisesRegex(b.Stop, "identity changed"):
+                b.restore_recorded_services(record, "fixture")
+            restart.assert_not_called()
+        record["units"] = []
+        record["containers"]["radarr"] = "not-an-id"
+        with self.assertRaisesRegex(b.Stop, "identity"):
+            b.validate_recovery_record(record)
+
+    @unittest.skipUnless(os.name == "posix" and hasattr(os, "O_NOFOLLOW"), "requires Linux filesystem semantics")
+    def test_recovery_record_is_durable_exclusive_and_rejects_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "record"
+            containers = {n: {"Id": "a" * 64} for n in b.EXPECTED_CONTAINERS}
+            b.create_recovery_record(path, os.getuid(), containers, [b.USER_TIMER])
+            self.assertEqual(b.load_recovery_record(path, owner=os.getuid())["units"], [b.USER_TIMER])
+            with self.assertRaises(FileExistsError):
+                b.create_recovery_record(path, os.getuid(), containers, [])
+            link = Path(tmp) / "link"; link.symlink_to(path)
+            with self.assertRaises(OSError):
+                b.load_recovery_record(link, owner=os.getuid())
+
     def fake_world(self, fail_container=None, fail_after_stop=False):
         names = sorted(b.EXPECTED_CONTAINERS)
         containers = {n: {"Id": n} for n in names}
