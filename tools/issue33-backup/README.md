@@ -14,7 +14,9 @@ reboot, an operator may run the reviewed root-owned script with
 container identities, service states, stop clients and systemd jobs, and
 requires the identified USB volume to be unmounted. It asks for `RECOVER`,
 then starts only services recorded as previously active. The pending record is
-retained for operator reconciliation; no backup is retried or overwritten.
+retained for operator reconciliation; after separately inspecting the USB
+generation the operator may rerun recovery and explicitly type `RECONCILED`
+to clear only that record. No backup is retried or overwritten.
 Uncatchable interruption during USB access can leave the disk mounted.
 Encrypted staging and incomplete generations may remain after failure.
 
