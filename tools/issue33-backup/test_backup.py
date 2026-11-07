@@ -24,6 +24,10 @@ class ProfileTests(unittest.TestCase):
                 b.require_empty_cron_cgroup(group, allowed={'100'}, must_exist=True)
             (group / 'cgroup.procs').write_text('100\n', encoding='ascii')
             b.require_empty_cron_cgroup(group, allowed={'100'}, must_exist=True)
+            nested = group / 'job'; nested.mkdir()
+            (nested / 'cgroup.procs').write_text('201\n', encoding='ascii')
+            with self.assertRaisesRegex(b.Stop, 'in-flight job'):
+                b.require_empty_cron_cgroup(group, allowed={'100'}, must_exist=True)
 
     def test_unplanned_mount_is_rejected_before_archive(self):
         b.require_accounted_root_mounts([{"target": "/", "children": [{"target": "/data"}, {"target": "/boot/efi"}]}])
