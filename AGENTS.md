@@ -97,7 +97,7 @@ needed work is preserved.
 
 ## Codex live homelab access
 
-For tasks that explicitly authorize live homelab access, use the Codex environment's preconfigured SSH host alias `homelab`.
+For tasks that explicitly authorize live Homelab access **on the home LAN**, use the Codex environment's preconfigured SSH host alias `homelab`. Off-LAN Meshnet access uses a separate operator-managed configuration described below.
 
 - Treat `homelab` as an environment capability, not repository configuration. Do not commit or infer the underlying hostname/IP, username, key path, private key, or other connection credentials.
 - Start with a non-mutating connectivity check such as `ssh -o BatchMode=yes -o ConnectTimeout=10 homelab true` before issuing live commands.
@@ -128,6 +128,18 @@ uses Meshnet; it is the existing LAN alias. Verify the selected alias via
 a non-mutating authenticated probe before live work. Never infer or publish its
 private HostName, peer address, SSH key, username or host-key details; do not
 edit SSH/network configuration merely because an alias is unavailable.
+
+### Meshnet config selection — verified 2026-11-08
+
+The [operator diagnosis in Issue #41](https://github.com/igormego/homelab-infrastructure/issues/41) found that the **existing approved Meshnet host alias lives in a separate, machine-local OpenSSH config file**. It is loaded explicitly using `ssh -F`; the default SSH configuration does **not** include it. Codex tasks checking only the default config or `ssh homelab` therefore do **not** test the Meshnet route and must not report Meshnet as unavailable on that basis.
+
+For an **explicitly authorized**, off-LAN read-only operator task in the existing Codex Desktop Local user context:
+
+1. Locate the **already approved** separate config and Meshnet alias using the local operator context; do not guess connection details or create new configuration. A repository, Codex Cloud task, or ordinary ChatGPT session does not provide this access.
+2. Verify using the existing configuration, for example: `ssh -F <EXISTING_OPERATOR_CONFIG> -o BatchMode=yes -o ConnectTimeout=10 <EXISTING_MESHNET_ALIAS> true`. Preserve strict host-key checking, existing authentication and the task's read-only boundary.
+3. If the authorized file/alias or connection is unavailable, report the actual context/access blocker and stop. Do not copy private keys, reveal local config paths or endpoints in GitHub/chat, disable verification, change SSH/network settings, or retry the LAN alias as a Meshnet diagnosis.
+
+One authenticated Meshnet SSH probe succeeded on 2026-11-08 with this existing configuration. That is **interactive connectivity evidence only**, not proof of unattended reliability, deployment readiness or new privileges. Do not conflate the Codex task repository with the local operator SSH environment.
 
 The user's normal ChatGPT/GitHub connector and published Codex Cloud environment
 do **not** inherit the notebook's Meshnet connection or administrative SSH key.
