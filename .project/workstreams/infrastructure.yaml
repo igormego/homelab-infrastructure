@@ -11,22 +11,25 @@ status: "active"
 phase: "post-migration-operations-and-agent-control-plane"
 
 current_gate: >
-  Movie Intelligence #26 is SOURCE-READY for one strict read-only operator
-  inventory: PR #53 classifier and PR #54 host collector are merged with
-  successful required CI. No live inventory, private snapshot publication,
-  PAB control mount or correlated ChatGPT Media read is yet accepted.
-  Independently, stable identity is verified for all 40 history candidates;
-  39 safe Trakt proposals and one unresolved Plex link remain unapproved for writes.
+  Movie Intelligence #26 LIVE read-only inventory was accepted 2026-11-09:
+  690 records, 565 watched, 125 CSFD watchlist, 50 playable Plex Movies,
+  all four source inventories complete and PAB v0.1 aggregate validated.
+  All 125 watchlist dispositions remain unresolved, so no missing-film
+  conclusion follows. PR #55 now source-ready/CI-green adds one-pass
+  aggregate-only identity/reason diagnostics; no actual diagnosis run yet.
+  Private snapshot publication, PAB control mount and ChatGPT Media read
+  remain unaccepted. Separately, 39 Trakt proposals remain unapproved.
 
 current_state: >
-  2026-11-09 SOURCE checkpoint: Movie Intelligence watchlist cross-source
-  classifier and trusted injected read collector are merged in PR #53/#54.
-  The collector reuses normalized SQLite mode=ro/WAL transactions, existing
-  per-item Plex checkFiles and bounded Radarr/Seerr GET sources; synthetic
-  CI passed. Its CLI returns aggregate only, keeps private titles out of
-  GitHub and fails closed on incomplete sources. No real Homelab collector
-  run, media changes, snapshot publication or new agent access occurred.
-  Earlier history and identity checkpoints below remain historical.
+  2026-11-09 LIVE read-only Movie Intelligence inventory #26 completed:
+  690 total, 565 watched, 125 CSFD watchlist, 50 playable main Plex Movies.
+  Four complete sources and PAB v0.1 validation passed; all 125 watchlist
+  classifications are unresolved, not proven missing. Read-only transient
+  collector ran without personal-data export or media/service mutation.
+  PR #55 (CI green) now provides a source-only one-shot diagnostic of missing
+  canonical IDs, global unknown source guard, conflicts and unavailable Plex
+  parts, but has not run against host. No PAB live mount or write grant.
+  Earlier Trakt and platform history below remain historical.
   Verified follow-up: all five previously excluded records now have confirmed TMDb and IMDb mappings, bringing the identity-qualified cohort to 40. Exact source metadata, credits and release history resolved festival/distribution year differences and rejected wrong-work hints. Existing external_ids was reused with a fresh SQLite-aware backup, disposable rehearsal, transactional invariant checks and reopened verification: 10 additive rows, no schema changes, no collisions, all pre-existing rows unchanged. A read-only history preflight qualified 39 proposals: two Plex-confirmed dates and 37 legacy placeholders; one unresolved Plex linkage is excluded. Zero cohort titles already exist in Trakt. All six previously accepted Trakt events remain unchanged and excluded. No Trakt/Plex/watch-date writes occurred.
   Earlier checkpoints below are historical.
   Issue 17 verified completion on 2026-09-27 at 19:04 UTC. Seerr request 2 is
@@ -98,13 +101,15 @@ current_state: >
   has now been checked successfully under Issue 13.
 
 exact_next_action: >
-  For Movie Intelligence #26, run one separately authorized private
-  read-only operator preflight/collector on the existing Meshnet/local lane,
-  confirm four complete sources and the PAB-compatible aggregate; do not
-  print or publish title rows. Then review private 0600 snapshot publication
-  and control read-only mount with PAB #83 owner before any ChatGPT live read.
-  The 39-entry Trakt history proposal remains a separate approval gate;
-  do not write history, grab/download films or clear Plex trash.
+  For Movie Intelligence #26, execute one private read-only
+  watchlist_collect.py --diagnose-identities from merged PR #55 through
+  the existing Codex Desktop Local/Meshnet operator context. Return only
+  sanitized canonical-ID coverage and unresolved reason counts; no raw
+  titles/IDs/credentials, third-party lookups, enrichment, downloads or
+  state mutations. Choose the smallest subsequent remediation from evidence.
+  PAB #83 read-only private snapshot publication/control mount is a
+  separate review gate; the 39-entry Trakt history proposal separately
+  requires its own authorization.
 
 blockers: []
 
@@ -255,5 +260,6 @@ watchlist_inventory_issue_26:
     - "The aggregate reported 690 catalog records, 565 watched, 125 watchlist and zero overlap; the main Plex Movies library contained 50 playable movies."
     - "All 125 watchlist records were classified unresolved; zero were classified playable, managed/requested or reviewable missing. Zero reviewable missing is not proof that no titles are missing. The Watched placeholder library was excluded."
     - "The collector was not installed; no private title records, credentials or host paths were published, and no media or service mutation was performed."
-  limitation: "The aggregate does not identify individual causes of unresolved classification; no live PAB integration or private snapshot publication has been performed."
-  exact_next_action: "Separately review private snapshot publication and connection to the existing PAB media.resource_read capability; do not deploy either as part of this inventory."
+    - "2026-11-09 PR #55 source-only identity diagnostic merged; required Movie Intelligence CI passed. No live diagnostic result is claimed."
+  limitation: "The accepted original aggregate does not identify per-title causes of 125 unresolved; PR #55 adds source-only diagnostic, not yet executed. No PAB integration or private snapshot publication has been performed."
+  exact_next_action: "Run one operator-owned read-only --diagnose-identities pass with private credentials and sanitized reason counts. Use those to decide canonical-ID remediation; PAB #83 snapshot/control mount remains separately reviewed."
