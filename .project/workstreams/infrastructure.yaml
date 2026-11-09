@@ -215,3 +215,14 @@ backup_issue_33:
   blocker: "The reviewed production execution guard remains enabled pending separate approval of first write and downtime; secure off-host recovery-passphrase custody is unconfirmed."
   exact_next_action: "Review PR 49 and independently verify off-host recovery-passphrase custody, then separately approve the concrete first execution and guard removal. Preserve the guard until that approval."
   remaining_prerequisites: "Review and test executable implementation, source and writer completeness, runtime capacity guards and isolated restore; separately approve writable mount, new generation and necessary service quiescence."
+
+browser_access_issue_52:
+  status: "Component-tested"
+  last_verified: "2026-11-09"
+  issue: "https://github.com/igormego/homelab-infrastructure/issues/52"
+  verified:
+    - "Authenticated SSH through the existing separate operator-managed Meshnet configuration succeeded."
+    - "One temporary SSH process provided four Windows loopback-only local forwards to existing service bindings. Seerr and Radarr returned local login redirects with HTTP 200 at their targets; Sonarr and Plex returned HTTP 200."
+    - "No service, Docker, firewall, network, SSH or NordVPN configuration was changed. The forwards are temporary and depend on the SSH process and connection."
+  not_yet_verified: "Browser sign-in and authenticated application use; Android or nzb360 access."
+  exact_next_action: "Open the local forwarded URLs on the notebook and confirm browser sign-in and read-only visibility; keep mobile access as a separate pending milestone."
