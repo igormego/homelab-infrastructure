@@ -132,3 +132,32 @@ Only GET `/api/v3/movie` and `/api/v3/qualityprofile` are implemented. Authentic
 5. After live read acceptance, open a separate narrow **Seerr request wrapper** task. Direct unrestricted ARR mutation remains excluded.
 
 No Seerr requests, downloads, upgrades, deletions, shell execution, arbitrary SQL or public API server are included. See [ADR 002](../../docs/decisions/002-movie-intelligence-read-contract.md), [Node SQLite](https://nodejs.org/docs/latest-v24.x/api/sqlite.html), and [Radarr API](https://radarr.video/docs/api/).
+
+## Watchlist availability classifier (Issue #26, source-only)
+
+`watchlist_inventory.py` is a pure Python standard-library function:
+`classify_watchlist(catalog=..., plex_movies=..., radarr_movies=...,
+seerr_requests=..., sources_complete=..., collected_at=...)`.
+It returns a **small aggregate packet** compatible with PAB's source-only
+`media.resource_read("movies/watchlist-overview")` contract, plus separate
+**private per-title review rows**. It makes no SQLite/API/network/filesystem
+calls or service changes. Offline synthetic tests:
+`PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_watchlist_inventory.py'`.
+
+A later **trusted operator collector**, not this classifier, must read the
+existing normalized `media.db` in safe SQLite read-only/WAL-aware mode, complete
+Plex **main Movies** metadata with `checkFiles=1` evidence, complete Radarr
+movie/queue and Seerr request lists. It then normalizes four complete source
+lists to the exact bounded key shapes enforced by the classifier. The operator
+must prove entire-source pagination, stable identity, real file accessibility,
+and no watched-placeholder contamination before declaring source completeness.
+Any partial source fails closed; missing GUIDs, canonical conflicts or retained
+Plex trash are **unresolved**, not automatically downloadable.
+
+The model-facing aggregate contains no titles, paths or raw responses.
+Per-title private rows must **never** be committed, posted to this public
+repository or exposed in CI artifacts. An isolated source change and passing
+GitHub CI do **not** enable host collection, the PAB control mount, ChatGPT
+resource access or automatic requests/repairs. Production activation needs its
+own reviewed read-only operator gate and real correlated ChatGPT acceptance.
+No download/profile/metadata/Plex trash/ARR changes are authorized by Issue #26.
