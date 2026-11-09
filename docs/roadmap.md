@@ -2,6 +2,8 @@
 
 ## Game Intelligence — 2026-11-01
 
+- **Platform library SOURCE milestone (2026-11-09):** [PR #51](https://github.com/igormego/homelab-infrastructure/pull/51) merged, focused Game Intelligence Python Actions passed. Owner screenshots staged privately as [Switch #107](https://github.com/igormego/personal-project-brain/issues/107) (92 observations) and [PlayStation #108](https://github.com/igormego/personal-project-brain/issues/108) (188). Guarded importer can preview and apply an additive platform evidence table with SQLite backup without touching Backloggd statuses. **NOT deployed and no live database import performed.** Next: an authorized Codex Desktop Local host pass using reviewed code, preview -> backup/apply -> read-back counts and integrity, preserving unlinked/ambiguous editions.
+
 - **Verified host:** private SQLite catalog contains 145 games, `PRAGMA integrity_check = ok`. Direct Backloggd requests from the host are blocked by bot protection; the initial catalog used a one-time private transfer.
 - **Verified journal import:** PR #37 merged (17 offline CI tests). Owner reported successful no-write dry-run, a database backup, three imported 2026 sessions, 145 games retained and SQLite integrity `ok`. Hades II: 7,200 recorded minutes, Alan Wake Remastered: 1,080 minutes, Persona 3 Reload: playtime unknown. Historic records have no inferred dates/hours.
 - **Next:** enrich title metadata from public Backloggd details, then implement repeatable private snapshot delivery. Direct IGDB API not required. No automatic sync or host-facing Backloggd scraper is live.
