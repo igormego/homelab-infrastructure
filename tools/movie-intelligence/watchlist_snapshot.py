@@ -99,7 +99,7 @@ def publish_private_snapshot(packet, path: Path = DEFAULT_HOST_SNAPSHOT_PATH, *,
     """
     pending = None
     try:
-        if type(path) is not Path or not path.is_absolute():
+        if not isinstance(path, Path) or not path.is_absolute():
             _deny()
         raw = validate_aggregate(packet, now=now)
         directory = path.parent
