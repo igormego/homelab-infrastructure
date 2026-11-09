@@ -211,3 +211,32 @@ sanitized aggregate evidence only, followed by a separately approved
 atomic 0600 source snapshot publication into a private 0700 directory
 and a controlled read-only PAB mount. A genuine correlated ChatGPT read
 is a later acceptance step, distinct from merged CI.
+
+
+### Zero-actionable watchlist: privacy-safe identity diagnostic (#26)
+
+The verified 2026-11-09 inventory had 125/125 unresolved ČSFD-watchlist
+entries. The strict PAB aggregate did not include any *reason codes*, so neither
+missing TMDb/IMDb IDs nor the classifier's global unidentified-source guard has
+yet been proved as the root cause. No missing-film or download conclusion may
+be drawn from zero reviewable items.
+
+The **source-only**, transient operator CLI supports
+`python3 watchlist_collect.py --diagnose-identities` using **the same approved
+private host credentials and API read boundary** as the existing collector.
+It collects the four complete sources only once, then prints only aggregate
+counts: watchlist rows with no TMDb/IMDb, TMDb only, IMDb only, or both; counts
+of Plex/Radarr/Seerr records with neither canonical ID; and *mutually exclusive
+reasons for currently unresolved watchlist entries*. The output is NOT the
+`movies/watchlist-overview` PAB resource schema, and no per-title identities,
+titles, paths or credentials are printed. "Neither TMDb nor IMDb" does not
+independently verify the presence of a ČSFD ID. No ID enrichment, matching via
+title/year, third-party provider request, SQLite write or media action is allowed.
+
+Run only from Codex Desktop Local `local-homelab-admin` with its pre-existing,
+separate Meshnet SSH config loaded via `ssh -F` when off-LAN. No new host grant
+or public network exposure is implied. If required read sources are missing,
+return the fixed blocked reason; keep all raw per-title evidence private.
+Only sanitized aggregate reason counts may be added to #26. After diagnosis,
+choose the smallest safe follow-up without speculative rewriting of the 125
+entries. PAB #83's snapshot read integration remains a separate gate.
