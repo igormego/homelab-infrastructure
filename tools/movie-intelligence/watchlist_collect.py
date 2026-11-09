@@ -8,6 +8,7 @@ to the caller in memory and must never be published to a public GitHub repo.
 """
 from __future__ import annotations
 
+import argparse
 from datetime import datetime, timezone
 import json
 import os
@@ -18,7 +19,9 @@ import sys
 import time
 
 from lifecycle_cli import plex_listing
-from watchlist_inventory import InventoryUncertain, classify_watchlist
+from watchlist_inventory import (
+    InventoryUncertain, classify_watchlist, diagnose_watchlist_identities,
+)
 
 MAX_RECORDS = 10000
 MAX_DB_JOIN_ROWS = 40000
@@ -269,7 +272,7 @@ def seerr_movie_requests(seerr):
         _unavailable()
 
 
-def collect(*, db_path, plex, radarr, seerr, movies_id, archive_id, clock=None):
+def collect(*, db_path, plex, radarr, seerr, movies_id, archive_id, clock=None, diagnose=False):
     """Collect one conservative complete snapshot, without public private title data."""
     started = time.monotonic()
     collected_at = (clock or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -280,12 +283,21 @@ def collect(*, db_path, plex, radarr, seerr, movies_id, archive_id, clock=None):
         requests = seerr_movie_requests(seerr)
         if time.monotonic() - started > MAX_COLLECTION_SECONDS:
             _unavailable()
-        return classify_watchlist(
+        aggregate, private = classify_watchlist(
             catalog=catalog, plex_movies=movies, radarr_movies=managed,
             seerr_requests=requests,
             sources_complete={key: True for key in ("movie_db", "plex", "radarr", "seerr")},
             collected_at=collected_at,
         )
+        if diagnose is True:
+            detail = diagnose_watchlist_identities(
+                catalog=catalog, plex_movies=movies, radarr_movies=managed,
+                seerr_requests=requests, private_items=private,
+            )
+            return aggregate, private, detail
+        if diagnose is not False:
+            _unavailable()
+        return aggregate, private
     except Exception:
         # Never forward raw HTTP errors, paths, private titles or database content.
         _unavailable()
@@ -295,17 +307,30 @@ def main():
     """Operator-only transient command; no deployment, scheduler or file publication."""
     from archive import ReadAPI
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--diagnose-identities", action="store_true")
+    args = parser.parse_args()
     try:
         env = os.environ
-        packet, _private_items = collect(
+        result = collect(
             db_path=env["MOVIE_DB_PATH"],
             plex=ReadAPI(env["PLEX_BASE_URL"], env["PLEX_TOKEN"], "X-Plex-Token"),
             radarr=ReadAPI(env["RADARR_BASE_URL"], env["RADARR_API_KEY"]),
             seerr=ReadAPI(env["SEERR_BASE_URL"], env["SEERR_API_KEY"]),
             movies_id=int(env["PLEX_MOVIES_LIBRARY_ID"]),
             archive_id=int(env["PLEX_ARCHIVE_LIBRARY_ID"]),
+            diagnose=args.diagnose_identities,
         )
-        print(json.dumps(packet, ensure_ascii=True, separators=(",", ":")))
+        if args.diagnose_identities:
+            packet, _private_items, diagnostic = result
+            output = {
+                "read_only": True, "resource_id": "movies/watchlist-identity-diagnostic",
+                "collected_at": packet["collected_at"], "diagnostic": diagnostic,
+            }
+        else:
+            packet, _private_items = result
+            output = packet
+        print(json.dumps(output, ensure_ascii=True, separators=(",", ":")))
         return 0
     except Exception:
         print(json.dumps({"read_only": True, "status": "blocked",
