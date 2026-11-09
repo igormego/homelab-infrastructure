@@ -109,10 +109,10 @@ class CollectorTests(unittest.TestCase):
         db.close()
         self.plex, self.radarr, self.seerr = FakePlex(), FakeRadarr(), FakeSeerr()
 
-    def run_collect(self):
+    def run_collect(self, **options):
         return collect(
             db_path=self.db_path, plex=self.plex, radarr=self.radarr,
-            seerr=self.seerr, movies_id=1, archive_id=4, clock=TIME,
+            seerr=self.seerr, movies_id=1, archive_id=4, clock=TIME, **options,
         )
 
     def test_full_read_only_collection_and_aggregate_private_separation(self):
@@ -142,6 +142,26 @@ class CollectorTests(unittest.TestCase):
         ])
         # The collector must never fetch placeholder library items as actual movies.
         self.assertFalse(any("/sections/4/all" in p for p in self.plex.calls))
+
+    def test_diagnostics_in_same_read_pass_without_private_rows(self):
+        aggregate, private, diagnostic = self.run_collect(diagnose=True)
+        self.assertEqual(aggregate["catalog"]["watchlist"], 4)
+        self.assertEqual(diagnostic["watchlist_total"], 4)
+        self.assertEqual(diagnostic["canonical_coverage"]["both"], 4)
+        self.assertEqual(diagnostic["unresolved_total"], 0)
+        self.assertEqual(len(private), 4)
+        self.assertNotIn("Private movie", str(diagnostic))
+        self.assertEqual(len(self.plex.calls), 3)
+        self.assertEqual(len(self.radarr.calls), 2)
+        self.assertEqual(len(self.seerr.calls), 1)
+
+    def test_diagnostic_cli_fails_closed_without_host_credentials(self):
+        output = io.StringIO()
+        with patch.dict(os.environ, {"MOVIE_DB_PATH": self.db_path}, clear=True), (
+                contextlib.redirect_stdout(output)):
+            self.assertEqual(main(["--diagnose-identities"]), 2)
+        self.assertNotIn(self.db_path, output.getvalue())
+        self.assertIn('"status": "blocked"', output.getvalue())
 
     def test_normalized_sqlite_wal_read_and_unknown_year(self):
         db = sqlite3.connect(self.db_path)
