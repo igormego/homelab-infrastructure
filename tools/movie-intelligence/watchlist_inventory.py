@@ -88,7 +88,8 @@ def classify_watchlist(*, catalog, plex_movies, radarr_movies, seerr_requests,
     _rows(seerr_requests, ("tmdb", "imdb", "requested"))
     for row in catalog:
         if (type(row["title"]) is not str or not 1 <= len(row["title"]) <= 250
-                or type(row["year"]) is not int or not 1880 <= row["year"] <= 2200
+                or (row["year"] is not None and (type(row["year"]) is not int
+                    or not 1880 <= row["year"] <= 2200))
                 or type(row["watched"]) is not bool or type(row["watchlist"]) is not bool):
             _deny()
     for row in plex_movies:
@@ -131,9 +132,9 @@ def classify_watchlist(*, catalog, plex_movies, radarr_movies, seerr_requests,
                 elif p:
                     # A retained Plex trash item is NOT a verified download.
                     decision = "unresolved"
-                elif any(row["has_file"] or row["monitored"] or row["queued"] for row in r) or any(
-                    row["requested"] for row in s
-                ):
+                elif r or any(row["requested"] for row in s):
+                    # Even an unmonitored/no-file Radarr record is still managed:
+                    # never silently call a registered title "unmanaged".
                     decision = "managed_or_requested"
                 elif not unknown_identity:
                     decision = "reviewable_missing"
