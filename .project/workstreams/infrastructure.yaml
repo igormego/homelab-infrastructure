@@ -244,3 +244,16 @@ browser_access_issue_52:
     - "No service, Docker, firewall, network, SSH or NordVPN configuration was changed. The forwards are temporary and depend on the SSH process and connection."
   not_yet_verified: "Browser sign-in and authenticated application use; Android or nzb360 access."
   exact_next_action: "Open the local forwarded URLs on the notebook and confirm browser sign-in and read-only visibility; keep mobile access as a separate pending milestone."
+
+watchlist_inventory_issue_26:
+  status: "Verified"
+  last_verified: "2026-11-09"
+  issue: "https://github.com/igormego/homelab-infrastructure/issues/26"
+  verified:
+    - "One bounded read-only collection used the merged PR 54 source transiently and existing private host credentials; SQLite used read-only WAL-aware access and service requests were passive GETs."
+    - "All four collector sources reported complete. The PAB movies/watchlist-overview v0.1 validator accepted the aggregate."
+    - "The aggregate reported 690 catalog records, 565 watched, 125 watchlist and zero overlap; the main Plex Movies library contained 50 playable movies."
+    - "All 125 watchlist records were classified unresolved; zero were classified playable, managed/requested or reviewable missing. Zero reviewable missing is not proof that no titles are missing. The Watched placeholder library was excluded."
+    - "The collector was not installed; no private title records, credentials or host paths were published, and no media or service mutation was performed."
+  limitation: "The aggregate does not identify individual causes of unresolved classification; no live PAB integration or private snapshot publication has been performed."
+  exact_next_action: "Separately review private snapshot publication and connection to the existing PAB media.resource_read capability; do not deploy either as part of this inventory."
