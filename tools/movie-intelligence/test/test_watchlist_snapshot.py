@@ -152,7 +152,8 @@ class CLIContractTests(unittest.TestCase):
             "PLEX_ARCHIVE_LIBRARY_ID": "2",
         }
         stdout = io.StringIO()
-        with patch.dict(os.environ, env, clear=True), (
+        with (
+            patch.dict(os.environ, env, clear=True),
             patch("archive.ReadAPI", return_value=object()) as api,
             patch("watchlist_collect.collect", return_value=(sample(), [{"title": "private"}])) as collect,
             patch("watchlist_snapshot.publish_private_snapshot") as publish,
@@ -171,8 +172,10 @@ class CLIContractTests(unittest.TestCase):
 
     def test_diagnostic_cannot_be_published_as_movie_snapshot(self):
         stdout = io.StringIO()
-        with patch("watchlist_collect.collect") as collect, (
-             contextlib.redirect_stdout(stdout)):
+        with (
+            patch("watchlist_collect.collect") as collect,
+            contextlib.redirect_stdout(stdout),
+        ):
             self.assertEqual(main([
                 "--diagnose-identities", "--publish-private-snapshot"
             ]), 2)
