@@ -161,3 +161,53 @@ GitHub CI do **not** enable host collection, the PAB control mount, ChatGPT
 resource access or automatic requests/repairs. Production activation needs its
 own reviewed read-only operator gate and real correlated ChatGPT acceptance.
 No download/profile/metadata/Plex trash/ARR changes are authorized by Issue #26.
+
+### Source-only collector (next #26 milestone)
+
+`watchlist_collect.py` reuses the existing **read-only** `archive.ReadAPI`
+(no redirects, bounded HTTP responses), `lifecycle_cli.plex_listing`
+(complete listing + per-item `checkFiles=1`), and the verified normalized
+SQLite tables (`movies`, `user_movies`, `external_ids`). It additionally
+reads Radarr's full movie list and a complete bounded queue and the existing
+Seerr v3.4.1 read-only movie-request pagination. Its source clients and
+`collect(...)` are injectable for synthetic testing. The same
+`classify_watchlist` module produces a strict aggregate and private
+per-title list **in memory**, without mutations.
+
+The optional `watchlist_collect.py` CLI is **not an installed service**.
+A trusted operator must explicitly inject existing private host-only
+`MOVIE_DB_PATH`, `PLEX_BASE_URL`, `PLEX_TOKEN`,
+`PLEX_MOVIES_LIBRARY_ID`, `PLEX_ARCHIVE_LIBRARY_ID`,
+`RADARR_BASE_URL`, `RADARR_API_KEY`, `SEERR_BASE_URL`,
+`SEERR_API_KEY` from their already approved credential source. Do not
+submit these values, unredacted URLs or private paths to GitHub, ChatGPT,
+CI or a Codex Cloud task. The CLI prints only the source-filtered aggregate,
+or a fixed non-sensitive `blocked` code. It **does not save a snapshot**
+or disclose per-title data; operators must keep any in-memory private
+review rows in an approved private context. A later separately approved
+private atomic publication + control read-only mount is required for
+the existing PAB `media.resource_read` consumer to use it.
+
+All four source inventories and the required Movies/Watched section
+separation must be proved complete; missing user-state rows, malformed
+identity, missing Plex availability flags, unknown Radarr queue IDs,
+Seerr service errors and partial pages reject the entire packet rather
+than invent missing-film candidates. Unknown Plex identities keep
+missing dispositions unresolved. The main Movies item with a red-trash
+icon is **not** counted as playable; the Watched archive is never
+queried for playback availability. Unmonitored registered Radarr titles
+are still considered managed, not fresh missing candidates.
+
+**Verification:** the existing Movie Intelligence Actions workflow
+discovers `test_watchlist_collect.py` with the other synthetic Python tests.
+All its SQLite fixtures and HTTP clients are disposable/in-memory; CI
+never has production secrets or network access. No PAB deployment,
+systemd timer, Docker image, permission change, actual download, rescan
+or credential transfer is authorized by this source work.
+
+**Next exact gate:** a reviewed operator one-shot run with a private
+read-only host environment, validated source versions and bounded time;
+sanitized aggregate evidence only, followed by a separately approved
+atomic 0600 source snapshot publication into a private 0700 directory
+and a controlled read-only PAB mount. A genuine correlated ChatGPT read
+is a later acceptance step, distinct from merged CI.
