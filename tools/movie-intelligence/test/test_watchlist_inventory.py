@@ -3,7 +3,8 @@ from copy import deepcopy
 import json
 import unittest
 
-from watchlist_inventory import InventoryUncertain, classify_watchlist
+from watchlist_inventory import (InventoryUncertain, classify_watchlist,
+                                 diagnose_watchlist_identities)
 
 DATE = "2026-11-09T17:00:00Z"
 
@@ -126,3 +127,75 @@ class WatchlistClassificationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IdentityDiagnosticsTests(unittest.TestCase):
+    def diagnose(self, data=None):
+        data = data or sample()
+        _aggregate, private = run(data)
+        return diagnose_watchlist_identities(
+            catalog=data["catalog"], plex_movies=data["plex_movies"],
+            radarr_movies=data["radarr_movies"],
+            seerr_requests=data["seerr_requests"], private_items=private,
+        )
+
+    def test_report_aggregate_only_canonical_coverage(self):
+        result = self.diagnose()
+        self.assertEqual(result["diagnostic_version"], "0.1")
+        self.assertEqual(result["watchlist_total"], 5)
+        self.assertEqual(result["canonical_coverage"], {
+            "neither": 1, "tmdb_only": 0, "imdb_only": 0, "both": 4,
+        })
+        self.assertEqual(result["unresolved_total"], 1)
+        self.assertEqual(result["unresolved_reasons"]["no_tmdb_or_imdb"], 1)
+        self.assertEqual(sum(result["unresolved_reasons"].values()), 1)
+        self.assertEqual(result["source_rows_without_canonical_identity"],
+                         {"plex": 0, "radarr": 0, "seerr": 0})
+        self.assertNotIn("Film", str(result))
+        self.assertNotIn("tt0000", str(result))
+
+    def test_independent_tmdb_imdb_coverage_buckets(self):
+        data = sample()
+        data["catalog"][0]["imdb"] = None
+        data["catalog"][1]["tmdb"] = None
+        result = self.diagnose(data)
+        self.assertEqual(result["canonical_coverage"], {
+            "neither": 1, "tmdb_only": 1, "imdb_only": 1, "both": 2,
+        })
+
+    def test_global_unknown_source_guard_is_explained(self):
+        data = sample()
+        data["plex_movies"].append({
+            "rating_key": "2", "tmdb": None, "imdb": None,
+            "parts": [{"exists": True, "accessible": True}],
+        })
+        result = self.diagnose(data)
+        self.assertEqual(result["source_rows_without_canonical_identity"]["plex"], 1)
+        self.assertEqual(result["unresolved_total"], 2)
+        self.assertEqual(result["unresolved_reasons"]["no_tmdb_or_imdb"], 1)
+        self.assertEqual(result["unresolved_reasons"]["global_unknown_source_guard"], 1)
+
+    def test_conflicting_ids_are_not_assumed_missing(self):
+        data = sample()
+        data["plex_movies"][0]["imdb"] = "tt1234567"
+        result = self.diagnose(data)
+        self.assertEqual(result["unresolved_total"], 2)
+        self.assertEqual(result["unresolved_reasons"]["identity_conflict"], 1)
+
+    def test_unavailable_plex_media_is_explicitly_unresolved(self):
+        data = sample()
+        data["plex_movies"][0]["parts"] = [{"exists": False, "accessible": False}]
+        result = self.diagnose(data)
+        self.assertEqual(result["unresolved_total"], 2)
+        self.assertEqual(result["unresolved_reasons"]["plex_unavailable"], 1)
+
+    def test_reject_tampered_private_decision_rows(self):
+        data = sample()
+        _aggregate, private = run(data)
+        private[0]["imdb"] = "tt1234567"
+        with self.assertRaises(InventoryUncertain):
+            diagnose_watchlist_identities(
+                catalog=data["catalog"], plex_movies=data["plex_movies"],
+                radarr_movies=data["radarr_movies"],
+                seerr_requests=data["seerr_requests"], private_items=private,
+            )
