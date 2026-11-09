@@ -303,13 +303,13 @@ def collect(*, db_path, plex, radarr, seerr, movies_id, archive_id, clock=None, 
         _unavailable()
 
 
-def main():
+def main(argv=()):
     """Operator-only transient command; no deployment, scheduler or file publication."""
     from archive import ReadAPI
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--diagnose-identities", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         env = os.environ
         result = collect(
@@ -339,4 +339,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
