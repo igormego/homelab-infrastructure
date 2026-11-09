@@ -309,8 +309,11 @@ def main(argv=()):
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--diagnose-identities", action="store_true")
+    parser.add_argument("--publish-private-snapshot", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.diagnose_identities and args.publish_private_snapshot:
+            _unavailable()  # Diagnostic is NOT the PAB v0.1 snapshot contract.
         env = os.environ
         result = collect(
             db_path=env["MOVIE_DB_PATH"],
@@ -329,7 +332,20 @@ def main(argv=()):
             }
         else:
             packet, _private_items = result
-            output = packet
+            if args.publish_private_snapshot:
+                from watchlist_snapshot import (
+                    DEFAULT_HOST_SNAPSHOT_PATH, publish_private_snapshot,
+                )
+                # A separate operator must authorize this one private file
+                # publication. Never send private items or credentials.
+                publish_private_snapshot(packet, DEFAULT_HOST_SNAPSHOT_PATH)
+                output = {
+                    "resource_id": "movies/watchlist-overview",
+                    "status": "snapshot_published",
+                    "media_effect_performed": False,
+                }
+            else:
+                output = packet
         print(json.dumps(output, ensure_ascii=True, separators=(",", ":")))
         return 0
     except Exception:

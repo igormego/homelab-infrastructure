@@ -240,3 +240,41 @@ return the fixed blocked reason; keep all raw per-title evidence private.
 Only sanitized aggregate reason counts may be added to #26. After diagnosis,
 choose the smallest safe follow-up without speculative rewriting of the 125
 entries. PAB #83's snapshot read integration remains a separate gate.
+
+
+### Private read snapshot publication — optional future operator gate (#26 / PAB #83)
+
+`watchlist_collect.py --publish-private-snapshot` is an **explicit operator-only
+file-publishing action**, not a read-only command and **not installed or
+scheduled** by this source change. It reuses the exact same four-source
+read-only collector and emits one strictly validated, source-complete,
+aggregate-only `movies/watchlist-overview` v0.1 JSON file. No title, external
+movie ID, watched history, raw provider response or credentials are serialized.
+
+Its sole fixed destination is
+`/var/lib/personal-ai-brain/media-audit/movies-watchlist-overview.json`.
+The parent directory MUST already exist as an **operator-owned 0700**
+non-symlink directory; the publisher neither creates directories nor changes
+permissions/UIDs. A previously existing destination must be an operator-owned
+regular single-link private file. Publication uses a fresh temporary 0600 file,
+fsync, atomic replacement and parent-directory fsync. The command prints only
+a fixed success/error status, never the JSON or private title rows. The
+`--diagnose-identities` flag is mutually exclusive: that result is **not**
+an approved PAB resource packet.
+
+A **separate, reviewed host deployment** must validate exact producer and PAB
+consumer source pins, operator and container UID visibility, approved existing
+host-only API credential injection, a truly read-only mounted snapshot path
+`/media-audit/movies-watchlist-overview.json` (no Docker socket or keys in
+control), exact PAB media master + Movie opt-in flags, no added exposed port,
+and a rollback that disables the Movie grant/removes only the added mount.
+No publication or control changes are approved just because the code/CI exists.
+Snapshot age is 30 minutes max; a one-shot publication does NOT provide an
+unattended fresh ongoing resource. Scheduling and lifecycle ownership require
+a separate operator gate; do not claim a persistent data feed.
+
+Once separately accepted, ordinary ChatGPT can request the approved **aggregate**
+via the existing private Issues control ledger. That does not grant access to
+per-title private rows, real-time Plex APIs, repairs or film requests. The
+2026-11-09 identity diagnostic proved 125/125 ČSFD watchlist entries lack both
+TMDb and IMDb; these are **unresolved**, not confirmed absent.
