@@ -31,6 +31,8 @@ def _unavailable():
 
 
 def _id(value):
+    if type(value) is bool:
+        _unavailable()
     if value in (None, "", 0):
         return None
     if type(value) is int and value > 0:
