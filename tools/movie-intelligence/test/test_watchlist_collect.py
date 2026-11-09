@@ -172,6 +172,11 @@ class CollectorTests(unittest.TestCase):
         with self.assertRaises(InventoryUncertain):
             normalized_catalog(self.db_path)
 
+    def test_boolean_source_identity_is_not_silently_unknown(self):
+        self.radarr.movies[0]["tmdbId"] = False
+        with self.assertRaises(InventoryUncertain):
+            self.run_collect()
+
     def test_plex_lost_file_remains_unresolved(self):
         self.plex.items[0]["Media"][0]["Part"][0] = {
             "exists": False, "accessible": False,
