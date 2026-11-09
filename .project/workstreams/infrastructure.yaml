@@ -11,11 +11,22 @@ status: "active"
 phase: "post-migration-operations-and-agent-control-plane"
 
 current_gate: >
-  Stable identity is verified for all 40 candidates. Read-only history
-  preflight proposes 39 safe entries and excludes one unresolved Plex link.
-  No history writes are authorized by this gate.
+  Movie Intelligence #26 is SOURCE-READY for one strict read-only operator
+  inventory: PR #53 classifier and PR #54 host collector are merged with
+  successful required CI. No live inventory, private snapshot publication,
+  PAB control mount or correlated ChatGPT Media read is yet accepted.
+  Independently, stable identity is verified for all 40 history candidates;
+  39 safe Trakt proposals and one unresolved Plex link remain unapproved for writes.
 
 current_state: >
+  2026-11-09 SOURCE checkpoint: Movie Intelligence watchlist cross-source
+  classifier and trusted injected read collector are merged in PR #53/#54.
+  The collector reuses normalized SQLite mode=ro/WAL transactions, existing
+  per-item Plex checkFiles and bounded Radarr/Seerr GET sources; synthetic
+  CI passed. Its CLI returns aggregate only, keeps private titles out of
+  GitHub and fails closed on incomplete sources. No real Homelab collector
+  run, media changes, snapshot publication or new agent access occurred.
+  Earlier history and identity checkpoints below remain historical.
   Verified follow-up: all five previously excluded records now have confirmed TMDb and IMDb mappings, bringing the identity-qualified cohort to 40. Exact source metadata, credits and release history resolved festival/distribution year differences and rejected wrong-work hints. Existing external_ids was reused with a fresh SQLite-aware backup, disposable rehearsal, transactional invariant checks and reopened verification: 10 additive rows, no schema changes, no collisions, all pre-existing rows unchanged. A read-only history preflight qualified 39 proposals: two Plex-confirmed dates and 37 legacy placeholders; one unresolved Plex linkage is excluded. Zero cohort titles already exist in Trakt. All six previously accepted Trakt events remain unchanged and excluded. No Trakt/Plex/watch-date writes occurred.
   Earlier checkpoints below are historical.
   Issue 17 verified completion on 2026-09-27 at 19:04 UTC. Seerr request 2 is
@@ -87,9 +98,13 @@ current_state: >
   has now been checked successfully under Issue 13.
 
 exact_next_action: >
-  Present the private 39-entry proposal for a separately authorized Trakt
-  batch. Recheck history immediately before any later write and keep the
-  unresolved Plex-link item excluded. Do not execute the batch in this task.
+  For Movie Intelligence #26, run one separately authorized private
+  read-only operator preflight/collector on the existing Meshnet/local lane,
+  confirm four complete sources and the PAB-compatible aggregate; do not
+  print or publish title rows. Then review private 0600 snapshot publication
+  and control read-only mount with PAB #83 owner before any ChatGPT live read.
+  The 39-entry Trakt history proposal remains a separate approval gate;
+  do not write history, grab/download films or clear Plex trash.
 
 blockers: []
 
@@ -116,6 +131,7 @@ dependencies:
       Issue 13 using explicit normalized mode and a transient supported runtime.
 
 important_open_loops:
+  - "Movie Intelligence #26: host collector PR #54 is source-only/CI green; private live operator audit, atomic snapshot publication, PAB #83 mount/read acceptance and per-title private triage remain pending."
   - "Whiplash request/import/Plex visibility are accepted; preserve replay/uncertainty audit evidence for future actions."
   - "Keep the local Movie Intelligence DB as the durable internal personal-state layer while the media workstream designs Plex/Trakt watched-history responsibilities."
   - "Use SQLite-aware backup semantics for online backups; avoid naive copy while WAL writes may be active."
@@ -140,8 +156,10 @@ portfolio:
     path to a fixed adapter, live acceptance and then controlled Seerr actions.
 
 verification:
-  last_verified: "2026-10-05"
+  last_verified: "2026-11-09"
   sources:
+    - "2026-11-09 source-only: PR #54 merged as f4d7548c67feeae99214619b858e578e1b543cea; Movie Intelligence Actions node-tests PASS. No host execution or private resource permission."
+    - "2026-11-09 source-only: PR #53 merged as 238bb14788609f510ec5a43d23349ab6f197ead6; pure classifier CI PASS; PAB #92 aggregate contract merged separately."
     - "2026-10-05 follow-up: five additional identity pairs verified; 40 qualified, 39 safe read-only proposals, one Plex-link exclusion, zero cohort duplicates; six accepted history events unchanged. Private evidence retained."
     - "2026-10-05: 40 inspected, 35 enriched with both stable IDs, five skipped; SQLite backup/rehearsal/reopen checks passed, 70 additive rows, no schema change or identity collisions, all pre-existing rows unchanged. Private evidence retained."
     - "Issue 17, 2026-09-27 19:04 UTC: request 2 completed; Radarr has_file=true, file 246 Bluray-2160p and matching on-disk size; Plex TMDb 244786 and exact media file match. Read-only; playback not tested."
