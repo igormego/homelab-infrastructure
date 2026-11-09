@@ -161,3 +161,82 @@ def classify_watchlist(*, catalog, plex_movies, radarr_movies, seerr_requests,
     }
     assert sum(aggregate["disposition"].values()) == aggregate["catalog"]["watchlist"]
     return aggregate, private_items
+
+def diagnose_watchlist_identities(*, catalog, plex_movies, radarr_movies,
+                                   seerr_requests, private_items):
+    """Bounded, aggregate-only explanation for unresolved classifications.
+
+    This is a diagnostic sidecar, NOT the versioned PAB resource payload.
+    Caller must supply the already validated source inventories and the
+    per-title decisions from classify_watchlist. No IDs, names or paths escape.
+    """
+    watchlist = [movie for movie in catalog if movie["watchlist"] is True]
+    if type(private_items) is not list or len(private_items) != len(watchlist):
+        _deny()
+    cover = Counter()
+    reasons = Counter()
+    unknown = {}
+    for name, rows in (
+        ("plex", plex_movies),
+        ("radarr", radarr_movies),
+        ("seerr", seerr_requests),
+    ):
+        unknown[name] = sum(
+            row["tmdb"] is None and row["imdb"] is None for row in rows
+        )
+    global_guard = any(unknown.values())
+
+    for movie, entry in zip(watchlist, private_items):
+        if (type(entry) is not dict or
+                entry.get("tmdb") != movie["tmdb"] or
+                entry.get("imdb") != movie["imdb"] or
+                entry.get("disposition") not in DISPOSITIONS):
+            _deny()
+        tmdb, imdb = movie["tmdb"] is not None, movie["imdb"] is not None
+        coverage = (
+            "both" if tmdb and imdb else
+            "tmdb_only" if tmdb else
+            "imdb_only" if imdb else
+            "neither"
+        )
+        cover[coverage] += 1
+        if entry["disposition"] != "unresolved":
+            continue
+        if coverage == "neither":
+            reason = "no_tmdb_or_imdb"
+        else:
+            p, pc = _matches(movie, plex_movies)
+            r, rc = _matches(movie, radarr_movies)
+            s, sc = _matches(movie, seerr_requests)
+            if pc or rc or sc:
+                reason = "identity_conflict"
+            elif p and not any(
+                part["exists"] and part["accessible"] for part in p[0]["parts"]
+            ):
+                reason = "plex_unavailable"
+            elif not p and not r and not any(x["requested"] for x in s) and global_guard:
+                reason = "global_unknown_source_guard"
+            else:
+                reason = "other_unknown"
+        reasons[reason] += 1
+
+    unresolved = sum(r["disposition"] == "unresolved" for r in private_items)
+    if sum(reasons.values()) != unresolved or sum(cover.values()) != len(watchlist):
+        _deny()
+    return {
+        "diagnostic_version": "0.1",
+        "watchlist_total": len(watchlist),
+        "canonical_coverage": {
+            k: cover[k] for k in ("neither", "tmdb_only", "imdb_only", "both")
+        },
+        "source_rows_without_canonical_identity": {
+            k: unknown[k] for k in ("plex", "radarr", "seerr")
+        },
+        "unresolved_total": unresolved,
+        "unresolved_reasons": {
+            k: reasons[k] for k in (
+                "no_tmdb_or_imdb", "identity_conflict", "plex_unavailable",
+                "global_unknown_source_guard", "other_unknown",
+            )
+        },
+    }
