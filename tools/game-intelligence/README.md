@@ -120,26 +120,33 @@ The first step validates identities without changing the DB. The write step is t
 
 Only explicit logged sessions are counted in playtime-based analytics. Queries over the historic library should separately state the completeness of logged sessions, not treat untracked hours as zero. Do not commit a private journal snapshot into this public repository.
 
-## Platform-library intake (Switch + PlayStation; source-only, not deployed)
+## Platform-library intake (Switch, PlayStation and Steam; source-only, not deployed)
 
-A separate manual importer `platform_inventory_import.py` accepts the two private,
+A separate manual importer `platform_inventory_import.py` accepts the three private,
 owner-confirmed screenshot inventories held in Project OS Issues **#107** (92 Switch
-software tiles) and **#108** (188 PlayStation software tiles). These issues are
+software tiles), **#108** (188 PlayStation software tiles) and **#110** (67
+Steam (PC) library entries). These issues are
 private **transport/evidence**, not Backloggd snapshots. The module does not edit
 the current Backloggd manifest Issue #96 or infer played, backlog, bought, DLC
 ownership, PS Plus renewal, completion, rating or playtime.
 
-The importer reads the two issues using the existing, authenticated **local**
+The importer reads the three issues using the existing, authenticated **local**
 GitHub CLI; never copy private intake CSVs into this public repository. It
 checks exact headers, trusted issue IDs, counts, types, positions, and duplicate
 platform/title/kind combinations. Preview is read-only. Explicit apply creates
 a timestamped SQLite backup, adds the separate `platform_library_inventory`
-table and upserts 280 observations transactionally with integrity/foreign-key
-checks. Title/Backloggd-ID matches attach an optional existing canonical
+table and upserts 347 observations transactionally with integrity/foreign-key
+checks. The reviewed legacy two-platform table, if present, is upgraded by a
+checked, transactional row-preserving table copy; unexpected schema drift fails
+closed. Observation dates are preserved separately for the two November 9
+screenshots and the November 10 Steam screenshot batch. Title/Backloggd-ID matches attach an optional existing canonical
 `games.id`; unmatched titles remain valid inventory records with NULL
 `game_id`. **No new games or status/rating records are created or modified**.
 Demo and regular-game tiles can coexist; subscription software and a limited
-playtest are separately typed.
+playtest are separately typed. A Steam library tile does not prove a paid
+purchase, a running installation, any playtime or a permanent entitlement;
+original/remastered and Director's Cut editions are kept as distinct observed
+titles until their canonical identity is resolved.
 
 On the authorized Homelab operator context, with existing private Issue read
 permissions, and *only after code review and deployment*:
