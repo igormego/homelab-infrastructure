@@ -262,6 +262,14 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(b.Stop, "backup mount"):
                 b.require_safe_usb_recovery()
 
+    def test_usb_recovery_allows_no_usb_but_rejects_unclassified_disk(self):
+        with mock.patch.object(b, "run", side_effect=[b'{"blockdevices":[]}', b'/\n']):
+            b.require_safe_usb_recovery()
+        unknown = {"blockdevices": [{"name": "/dev/example", "type": "disk", "tran": None}]}
+        with mock.patch.object(b, "run", return_value=json.dumps(unknown).encode()):
+            with self.assertRaisesRegex(b.Stop, "disk transport"):
+                b.require_safe_usb_recovery()
+
     def test_recovery_refuses_same_boot_before_any_restart(self):
         record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
                   "containers": {n: "b" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
