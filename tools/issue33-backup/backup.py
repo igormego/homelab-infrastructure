@@ -1050,20 +1050,63 @@ def verify_generation(path, secret):
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def diagnose_writers(uid, username, home, profile, recovery_path):
+    """Quiesce once, inspect open writers, and restore without creating a backup."""
+    if input("Type DIAGNOSE to approve the brief writer diagnostic outage: ").strip() != "DIAGNOSE":
+        raise Stop("diagnostic maintenance not confirmed")
+    containers = validate_workload(profile)
+    validate_volumes()
+    roots = {v["name"]: f"/var/lib/docker/volumes/{v['name']}/_data" for v in profile["volumes"]}
+    previous = {}
+
+    def interrupted(signum, frame):
+        raise Stop("diagnostic interrupted; automatic recovery initiated")
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        previous[sig] = signal.signal(sig, interrupted)
+    finding = None
+    try:
+        transaction = Quiescence(uid, username, containers, recovery_path)
+        with transaction:
+            try:
+                require_no_writers(home, roots)
+            except Stop as error:
+                finding = str(error)
+        # Only a successful __exit__ proves the recorded services were restored.
+        record = load_recovery_record(recovery_path)
+        if (record["uid"] != uid or
+            record["containers"] != {name: c["Id"] for name, c in containers.items()} or
+            set(record["units"]) != {unit for _, unit in transaction.units}):
+            raise Stop("recovery record changed; operator reconciliation required")
+        os.unlink(recovery_path)
+        directory_fd = os.open(str(Path(recovery_path).parent), os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+    if finding:
+        raise Stop(finding)
+    print("WRITER_DIAGNOSTIC_CLEAR: services restored; no open writer detected.")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--execute", action="store_true", help="run the separately approved privileged transaction")
     ap.add_argument("--recover-services", action="store_true", help="recover recorded services after reboot without retrying a backup")
+    ap.add_argument("--diagnose-writers", action="store_true", help="quiesce and inspect writers without a backup")
     ap.add_argument("--generation", help="explicit new .homelab-issue33-<32 lowercase hex> directory for a later run")
     ap.add_argument("--verify-generation", help="read-only verify a mounted generation on an isolated Linux host")
     args = ap.parse_args()
     if args.recover_services:
-        if args.execute or args.generation or args.verify_generation:
+        if args.execute or args.generation or args.verify_generation or args.diagnose_writers:
             raise Stop("recovery cannot be combined with other actions")
         operator_recovery(Path('/var/lib/issue33-backup/pending.json'))
         return
     if args.verify_generation:
-        if args.execute or args.generation or os.name != "posix" or not sys.stdin.isatty():
+        if args.execute or args.generation or args.diagnose_writers or os.name != "posix" or not sys.stdin.isatty():
             raise Stop("verification needs a Linux operator TTY and cannot be combined with execution")
         disable_core_dumps()
         phrase = getpass.getpass("Recovery passphrase (not logged): ")
@@ -1075,7 +1118,9 @@ def main():
         print("SNAPSHOT_VERIFIED: archives and in-memory Radarr integrity passed.")
         print("LIMITATION: application startup and whole-host restoration were not tested.")
         return
-    if not args.execute:
+    if args.diagnose_writers and (args.execute or args.generation):
+        raise Stop("writer diagnostic cannot be combined with backup execution")
+    if not args.execute and not args.diagnose_writers:
         raise Stop("no action: the separately approved --execute flag is required")
     if pwd is None or not hasattr(os, "geteuid") or os.geteuid() != 0 or not sys.stdin.isatty():
         raise Stop("run as root in an interactive operator TTY")
@@ -1098,6 +1143,12 @@ def main():
         load_recovery_record(recovery_path)
         raise Stop("unfinished operation requires operator recovery; no backup will be retried")
     profile, profile_bytes = select_profile(home, uid)
+    if args.diagnose_writers:
+        try:
+            diagnose_writers(uid, user.pw_name, home, profile, recovery_path)
+        finally:
+            os.close(lock_fd)
+        return
     generation_name = args.generation or profile.get("proposal_2026_11_06", {}).get("target", {}).get("generation_directory_at_volume_root", "")
     if not re.fullmatch(r"\.homelab-issue33-[0-9a-f]{32}", generation_name):
         raise Stop("private profile has no preselected unique generation name")

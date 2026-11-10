@@ -1,7 +1,7 @@
 # Issue 33 backup prototype
 
-**The first production execution is explicitly owner-authorized, but has not
-been performed.** Execution requires an interactive root operator, the exact
+**The first production attempt stopped at the open-writer guard; no verified
+production generation exists.** Execution requires an interactive root operator, the exact
 private inventory and USB identity, off-host recovery-phrase custody, and all
 existing preflight and recovery checks. A production backup or full restore is
 not claimed until independently verified.
@@ -20,6 +20,15 @@ generation the operator may rerun recovery and explicitly type `RECONCILED`
 to clear only that record. No backup is retried or overwritten.
 Uncatchable interruption during USB access can leave the disk mounted.
 Encrypted staging and incomplete generations may remain after failure.
+
+The separately approved `--diagnose-writers` mode uses the same interactive
+operator, workload validation, lock, pending record, quiescence and service
+restoration. It stops the inventoried services briefly, runs the existing
+open-writer guard and reports sanitized identifiers, then restores services.
+It performs no encryption, backup or USB access. It refuses an existing pending
+record; resolve that only through the existing recovery procedure. If stopping
+or restoration is uncertain, the pending record remains for recovery. No
+diagnostic outage is authorized by preparing this mode.
 
 The synthetic network-isolated Radarr startup and in-memory checks of restored
 SQLite and configuration are separate component tests, not an end-to-end
