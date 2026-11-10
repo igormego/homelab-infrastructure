@@ -67,6 +67,26 @@ class ProfileTests(unittest.TestCase):
                 b.main()
         quiescence.assert_not_called()
 
+    def test_writer_diagnostic_clear_never_starts_backup_or_usb(self):
+        transaction = mock.MagicMock()
+        transaction.units = []
+        transaction.__exit__.return_value = False
+        record = {"uid": 1000, "containers": {}, "units": []}
+        with mock.patch("builtins.input", return_value="DIAGNOSE"), \
+             mock.patch.object(b, "validate_workload", return_value={}), \
+             mock.patch.object(b, "validate_volumes"), \
+             mock.patch.object(b, "Quiescence", return_value=transaction), \
+             mock.patch.object(b, "require_no_writers"), \
+             mock.patch.object(b, "load_recovery_record", return_value=record), \
+             mock.patch.object(b, "check_disk") as disk, \
+             mock.patch.object(b, "encrypt_command") as encrypt, \
+             mock.patch.object(b.os, "unlink"), mock.patch.object(b.os, "open", return_value=123), \
+             mock.patch.object(b.os, "fsync"), mock.patch.object(b.os, "close"), \
+             mock.patch.object(b.signal, "signal", return_value=None):
+            b.diagnose_writers(1000, "operator", Path("/home/operator"), {"volumes": []}, Path("/state/pending"))
+        disk.assert_not_called()
+        encrypt.assert_not_called()
+
     def test_execution_requires_explicit_flag_and_privileged_interactive_operator(self):
         import sys
         with mock.patch.object(sys, "argv", ["backup.py"]), \
