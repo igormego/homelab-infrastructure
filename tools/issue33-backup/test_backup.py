@@ -234,6 +234,42 @@ class ProfileTests(unittest.TestCase):
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_usb_recovery_checks_mounts_and_open_devices_without_fingerprint(self):
+        tree = {"blockdevices": [{"name": "/dev/example", "type": "disk", "tran": "usb",
+                                  "mountpoints": [None], "children": [
+                                      {"name": "/dev/example1", "mountpoints": [None]}]}]}
+        def command(argv):
+            return json.dumps(tree).encode() if argv[0] == "lsblk" else b"/\n/data\n"
+        probe = mock.Mock(returncode=1, stdout=b"", stderr=b"")
+        with mock.patch.object(b, "run", side_effect=command), \
+             mock.patch.object(b, "check_disk") as identity, \
+             mock.patch.object(b.subprocess, "run", return_value=probe):
+            b.require_safe_usb_recovery()
+            identity.assert_not_called()
+            probe.stdout = b"p123\n"
+            with self.assertRaisesRegex(b.Stop, "in use"):
+                b.require_safe_usb_recovery()
+            probe.stdout = b""
+            tree["blockdevices"][0]["children"][0]["mountpoints"] = ["/media/disk"]
+            with self.assertRaisesRegex(b.Stop, "mounted"):
+                b.require_safe_usb_recovery()
+
+    def test_usb_recovery_rejects_unknown_state_and_backup_mount(self):
+        with mock.patch.object(b, "run", return_value=b'{"blockdevices":null}'):
+            with self.assertRaisesRegex(b.Stop, "mount state"):
+                b.require_safe_usb_recovery()
+        with mock.patch.object(b, "run", side_effect=[b'{"blockdevices":[]}', b'/run/issue33-usb-x\n']):
+            with self.assertRaisesRegex(b.Stop, "backup mount"):
+                b.require_safe_usb_recovery()
+
+    def test_usb_recovery_allows_no_usb_but_rejects_unclassified_disk(self):
+        with mock.patch.object(b, "run", side_effect=[b'{"blockdevices":[]}', b'/\n']):
+            b.require_safe_usb_recovery()
+        unknown = {"blockdevices": [{"name": "/dev/example", "type": "disk", "tran": None}]}
+        with mock.patch.object(b, "run", return_value=json.dumps(unknown).encode()):
+            with self.assertRaisesRegex(b.Stop, "disk transport"):
+                b.require_safe_usb_recovery()
+
     def test_recovery_refuses_same_boot_before_any_restart(self):
         record = {"version": 2, "uid": 1000, "boot_id": "a" * 36,
                   "containers": {n: "b" * 64 for n in b.EXPECTED_CONTAINERS}, "units": []}
@@ -259,8 +295,8 @@ class RecoveryTests(unittest.TestCase):
              mock.patch.object(b, "require_no_stop_clients"), \
              mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
              mock.patch.object(b, "run", return_value=b""), \
-             mock.patch.object(b, "check_disk", side_effect=b.Stop("candidate partition is already mounted")):
-            with self.assertRaisesRegex(b.Stop, "already mounted"):
+             mock.patch.object(b, "require_safe_usb_recovery", side_effect=b.Stop("USB storage is mounted")):
+            with self.assertRaisesRegex(b.Stop, "mounted"):
                 b.recovery_preflight(record, "fixture", Path("fixture"))
 
     def test_recovery_preflight_after_reboot_requires_settled_state(self):
@@ -274,7 +310,7 @@ class RecoveryTests(unittest.TestCase):
              mock.patch.object(b, "require_no_stop_clients") as clients, \
              mock.patch.object(b, "user_systemctl", return_value=["userctl"]), \
              mock.patch.object(b, "run", side_effect=command), \
-             mock.patch.object(b, "check_disk") as disk, \
+             mock.patch.object(b, "require_safe_usb_recovery") as disk, \
              mock.patch.object(b, "docker_inspect", side_effect=inspect):
             b.recovery_preflight(record, "fixture", Path("fixture"))
         self.assertEqual(clients.call_count, 2)
@@ -310,7 +346,7 @@ class RecoveryTests(unittest.TestCase):
              mock.patch.object(b, 'acquire_lock', return_value=99), \
              mock.patch.object(b, 'load_recovery_record', return_value=record), \
              mock.patch.object(b, 'current_boot_id', return_value='b' * 36), \
-             mock.patch.object(b, 'require_no_stop_clients'), mock.patch.object(b, 'check_disk'), \
+             mock.patch.object(b, 'require_no_stop_clients'), mock.patch.object(b, 'require_safe_usb_recovery'), \
              mock.patch.object(b, 'user_systemctl', return_value=['userctl']), \
              mock.patch.object(b, 'docker_inspect', side_effect=inspect), \
              mock.patch.object(b, 'run', side_effect=command), \
