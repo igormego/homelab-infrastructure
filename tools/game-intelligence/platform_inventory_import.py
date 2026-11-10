@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Manually import private Switch/PlayStation software-menu observations.
+"""Manually import private Switch/PlayStation/Steam library observations.
 
 Only creates or updates platform_library_inventory. Never writes games,
 user_games, playthroughs, game_metadata, or the Backloggd sync cursor.
-The source is two fixed, private Project OS Issues, not public repo data.
+The source is three fixed, private Project OS Issues, not public repo data.
 """
 from __future__ import annotations
 
@@ -22,8 +22,10 @@ from uuid import uuid4
 PRIVATE_REPO = "igormego/personal-project-brain"
 SWITCH_ISSUE = 107
 PLAYSTATION_ISSUE = 108
-OBSERVED_ON = "2026-11-09"
-COUNTS = {"Nintendo Switch": 92, "PlayStation": 188}
+STEAM_ISSUE = 110
+OBSERVED_ON = "2026-11-09"  # Existing Switch and PlayStation snapshot date.
+OBSERVED_ON_BY_PLATFORM = {"Nintendo Switch": OBSERVED_ON, "PlayStation": OBSERVED_ON, "Steam (PC)": "2026-11-10"}
+COUNTS = {"Nintendo Switch": 92, "PlayStation": 188, "Steam (PC)": 67}
 KINDS = {"game_or_app", "demo", "subscription_app", "limited_playtest"}
 VERIFICATIONS = {"visual_best_effort", "needs_review"}
 FENCE = re.compile(r"(?m)^" + chr(96) * 3 + r"csv\s*\n([\s\S]*?)^" + chr(96) * 3 + r"\s*$")
@@ -31,7 +33,7 @@ FENCE = re.compile(r"(?m)^" + chr(96) * 3 + r"csv\s*\n([\s\S]*?)^" + chr(96) * 3
 CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS platform_library_inventory (
   id INTEGER PRIMARY KEY,
-  platform TEXT NOT NULL CHECK(platform IN ('Nintendo Switch', 'PlayStation')),
+  platform TEXT NOT NULL CHECK(platform IN ('Nintendo Switch', 'PlayStation', 'Steam (PC)')),
   title TEXT NOT NULL,
   title_key TEXT NOT NULL,
   kind TEXT NOT NULL CHECK(kind IN ('game_or_app', 'demo', 'subscription_app', 'limited_playtest')),
@@ -44,6 +46,8 @@ CREATE TABLE IF NOT EXISTS platform_library_inventory (
   UNIQUE(platform, title_key, kind)
 )
 """
+# Previous, already-merged PR #51 schema. Upgrade it only when its exact DDL matches.
+CREATE_TABLE_V1 = CREATE_TABLE.replace(", 'Steam (PC)'", "")
 UPSERT = """
 INSERT INTO platform_library_inventory
 (platform, title, title_key, kind, verification, source_issue, source_position, observed_on, game_id)
@@ -73,8 +77,8 @@ def title_key(title: str) -> str:
 
 
 def private_issue_body(issue_number: int) -> str:
-    if issue_number not in (SWITCH_ISSUE, PLAYSTATION_ISSUE):
-        raise ValueError("Only two approved private intake issues may be read")
+    if issue_number not in (SWITCH_ISSUE, PLAYSTATION_ISSUE, STEAM_ISSUE):
+        raise ValueError("Only three approved private intake issues may be read")
     try:
         result = subprocess.run(
             ["gh", "issue", "view", str(issue_number), "--repo", PRIVATE_REPO,
@@ -94,9 +98,11 @@ def parse_issue(platform: str, body: str, *, expected_count: int | None = None) 
         raise ValueError("Expected exactly one CSV block in private intake issue")
 
     is_switch = platform == "Nintendo Switch"
+    is_steam = platform == "Steam (PC)"
     required = ({"position", "title", "kind", "catalog_match", "backloggd_id"} if is_switch
+                else {"position", "title", "kind", "verification"} if is_steam
                 else {"source_image", "position", "title", "kind", "verification"})
-    issue = SWITCH_ISSUE if is_switch else PLAYSTATION_ISSUE
+    issue = SWITCH_ISSUE if is_switch else STEAM_ISSUE if is_steam else PLAYSTATION_ISSUE
     reader = csv.DictReader(StringIO(blocks[0]))
     if not reader.fieldnames or set(reader.fieldnames) != required:
         raise ValueError("Unexpected private inventory CSV columns")
@@ -125,6 +131,15 @@ def parse_issue(platform: str, body: str, *, expected_count: int | None = None) 
             if backloggd_id and not re.fullmatch(r"[1-9][0-9]{0,14}", backloggd_id):
                 raise ValueError("Invalid Backloggd ID")
             verification = "visual_best_effort"
+        elif is_steam:
+            position = data["position"].strip()
+            if not re.fullmatch(r"T[0-9]{3}", position):
+                raise ValueError("Invalid Steam source position")
+            backloggd_id = None
+            catalog_match = None
+            verification = data["verification"].strip()
+            if verification not in VERIFICATIONS:
+                raise ValueError("Invalid verification status")
         else:
             image = data["source_image"].strip()
             pos = data["position"].strip()
@@ -154,7 +169,8 @@ def parse_issue(platform: str, body: str, *, expected_count: int | None = None) 
 
 def read_observations(fetch=private_issue_body) -> list[Observation]:
     return (parse_issue("Nintendo Switch", fetch(SWITCH_ISSUE)) +
-            parse_issue("PlayStation", fetch(PLAYSTATION_ISSUE)))
+            parse_issue("PlayStation", fetch(PLAYSTATION_ISSUE)) +
+            parse_issue("Steam (PC)", fetch(STEAM_ISSUE)))
 
 
 def resolve_links(con: sqlite3.Connection, rows: list[Observation]) -> list[tuple[Observation, int | None]]:
@@ -178,6 +194,50 @@ def resolve_links(con: sqlite3.Connection, rows: list[Observation]) -> list[tupl
                 game_id = candidates[0]
         linked.append((row, game_id))
     return linked
+
+
+
+def ensure_platform_table(con: sqlite3.Connection) -> None:
+    """Create the table or safely upgrade only the exact legacy two-platform schema.
+
+    SQLite cannot ALTER a CHECK constraint, so the reviewed v1 table is copied
+    transactionally. Unrecognized schema changes or inbound FKs fail closed.
+    """
+    record = con.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='platform_library_inventory'"
+    ).fetchone()
+    if record is None:
+        con.execute(CREATE_TABLE)
+        return
+    normalize = lambda value: " ".join(value.split())
+    if normalize(record[0]) == normalize(CREATE_TABLE):
+        return
+    if normalize(record[0]) != normalize(CREATE_TABLE_V1):
+        raise RuntimeError("Unexpected platform inventory table schema; manual review required")
+    for (other,) in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"):
+        if other == "platform_library_inventory":
+            continue
+        if any(fk[2] == "platform_library_inventory" for fk in con.execute(
+            "PRAGMA foreign_key_list(" + '"' + other.replace('"', '""') + '"' + ")"
+        )):
+            raise RuntimeError("Existing inbound platform-library foreign keys; manual review required")
+
+    replacement = "platform_library_inventory_v2_temp"
+    if con.execute("SELECT 1 FROM sqlite_master WHERE name=?", (replacement,)).fetchone():
+        raise RuntimeError("Temporary migration name already exists")
+    con.execute(CREATE_TABLE.replace(
+        "CREATE TABLE IF NOT EXISTS platform_library_inventory",
+        "CREATE TABLE " + replacement,
+    ))
+    cols = ("id, platform, title, title_key, kind, verification, source_issue, "
+            "source_position, observed_on, game_id, imported_at")
+    con.execute("INSERT INTO " + replacement + "(" + cols + ") SELECT " + cols + " FROM platform_library_inventory")
+    old_count = con.execute("SELECT COUNT(*) FROM platform_library_inventory").fetchone()[0]
+    new_count = con.execute("SELECT COUNT(*) FROM " + replacement).fetchone()[0]
+    if old_count != new_count:
+        raise RuntimeError("Platform library migration count mismatch")
+    con.execute("DROP TABLE platform_library_inventory")
+    con.execute("ALTER TABLE " + replacement + " RENAME TO platform_library_inventory")
 
 
 def import_inventory(db: Path, rows: list[Observation], *, apply: bool = False) -> tuple[int, int, Path | None]:
@@ -209,11 +269,11 @@ def import_inventory(db: Path, rows: list[Observation], *, apply: bool = False) 
             con.backup(target)
         try:
             con.execute("BEGIN IMMEDIATE")
-            con.execute(CREATE_TABLE)
+            ensure_platform_table(con)
             for row, game_id in linked:
                 con.execute(UPSERT, (row.platform, row.title, row.key, row.kind,
                                     row.verification, row.source_issue, row.source_position,
-                                    OBSERVED_ON, game_id))
+                                    OBSERVED_ON_BY_PLATFORM[row.platform], game_id))
             if con.execute("PRAGMA foreign_key_check").fetchone():
                 raise RuntimeError("Foreign key violation during platform inventory import")
             if con.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
