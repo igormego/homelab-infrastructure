@@ -216,6 +216,7 @@ backup_issue_33:
   last_verified: "2026-11-10"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/33"
   verified:
+    - "2026-11-10: PR 61 merged as d8933f3; recovery completed and pending record cleared after owner reconciliation. The separately approved quiesced writer diagnostic found no open writer and restored services. Independent inspection found all 13 containers running, configured health checks healthy, and checked timers/services active. The earlier writer remains unidentified. USB serial fingerprint mismatch remains unresolved and blocks backup."
     - "2026-11-10: after owner-approved reboot, Meshnet returned and all 13 containers ran. Operator recovery stopped because no disk matched the stored USB fingerprint. Read-only inventory found one USB disk of expected size with a nonempty serial, but its fingerprint did not match; cause unknown. Pending recovery remains; no diagnostic or backup was run."
     - "2026-11-10: first production attempt stopped at the persistent-source open-writer guard before USB generation. All 13 expected containers recovered; checked services/timers active. A later unprivileged lsof was incomplete and found writable descriptors in already-restored containers, not a proven culprit. PR 59 merged as 6f77b6b; sanitized failure identifiers, 35 offline tests and GitHub CI passed."
     - "2026-11-10: PR 58 removed the unconditional production guard after 32 offline tests and passing CI; the owner authorized one bounded production backup and confirmed independent off-host, off-USB recovery-passphrase custody. Authenticated Meshnet SSH passed. This checkpoint predates the failed first attempt." 
@@ -240,8 +241,8 @@ backup_issue_33:
   backup_executed: false\n  backup_attempted: true
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "Recovery is blocked by a mismatch between the attached USB disk and the existing private fingerprint; the cause is unknown. The pending record remains."
-  exact_next_action: "Verify the intended physical USB disk and independently reconcile its identity with the existing private fingerprint; do not bypass recovery or change the fingerprint without evidence."
+  blocker: "USB serial fingerprint mismatch remains unresolved; no verified production backup exists. The earlier open writer was not reproduced during the controlled diagnostic."
+  exact_next_action: "Independently reconcile the USB serial fingerprint without changing it automatically; then assess readiness for a separately controlled backup attempt."
   remaining_prerequisites: "Final disk identity, mount state and available privileged basic health check; verify private manifest, idle writers, staging and capacity immediately before execution. After the first write, verify actual generation integrity/decryption and isolate a representative restore."
 
 browser_access_issue_52:
