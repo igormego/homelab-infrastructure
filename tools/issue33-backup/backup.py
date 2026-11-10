@@ -274,6 +274,48 @@ def has_open_writer(lsof_output):
     return numeric_fd and not classified
 
 
+def writer_process_identity(pid):
+    """Read only bounded process identifiers; never expose cgroup paths."""
+    try:
+        comm = Path(f"/proc/{pid}/comm").read_text().strip()
+        comm = comm if re.fullmatch(r"[A-Za-z0-9_. -]{1,32}", comm) else "unknown"
+        cgroup = Path(f"/proc/{pid}/cgroup").read_text()
+        container = re.search(r"docker-([0-9a-f]{12})[0-9a-f]*\.scope", cgroup)
+        units = re.findall(r"(?:^|/)([A-Za-z0-9_.@-]{1,100}\.service)(?:/|$)", cgroup, re.MULTILINE)
+        owner = "container:" + container.group(1) if container else (units[-1] if units else "unknown")
+        return f" process={comm} owner={owner}"
+    except (OSError, UnicodeError):
+        return " process=unknown owner=unknown"
+
+
+def writer_diagnostics(lsof_output):
+    """Return bounded PID/FD/access identifiers, never filenames or arguments."""
+    findings = []
+    pid = None
+    fd = None
+    access = None
+
+    def record():
+        if fd is not None and access != "r" and len(findings) < 8:
+            identity = writer_process_identity(pid) if pid else " process=unknown owner=unknown"
+            findings.append(f"pid={pid or 'unknown'} fd={fd} access={access or 'unknown'}{identity}")
+
+    for line in lsof_output.splitlines():
+        if line.startswith("p"):
+            record()
+            pid = line[1:] if re.fullmatch(r"p[0-9]+", line) else None
+            fd = access = None
+        elif line.startswith("f"):
+            record()
+            match = re.match(r"f([0-9]+)", line)
+            fd = match.group(1) if match else None
+            access = None
+        elif line.startswith("a") and fd is not None:
+            access = line[1:] if line in ("ar", "aw", "au") else "unknown"
+    record()
+    return "; ".join(findings) or "identifiers unavailable"
+
+
 def require_no_writers(home, volume_roots):
     roots = ["/data/docker", "/data/agents", "/data/arr_backup", "/var/lib/personal-ai-brain",
              str(home / ".config" / "personal-ai-brain"), str(home / ".local" / "state" / "personal-ai-brain"),
@@ -285,8 +327,9 @@ def require_no_writers(home, volume_roots):
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if p.returncode not in (0, 1) or p.stderr.strip():
             raise Stop("cannot establish persistent-source writer state")
-        if has_open_writer(p.stdout.decode(errors="replace")):
-            raise Stop("persistent source still has an open writer")
+        output = p.stdout.decode(errors="replace")
+        if has_open_writer(output):
+            raise Stop("persistent source still has an open writer: " + writer_diagnostics(output))
 
 
 def tree_fingerprint(roots, excluded):
