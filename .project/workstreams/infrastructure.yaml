@@ -212,10 +212,11 @@ remote_access_issue_41:
   rollback: "Disable server Meshnet with nordvpn set meshnet off; pre-change inventory retained privately on host. Existing SSH key and canonical alias preserved."
 
 backup_issue_33:
-  status: "Blocked"
+  status: "Authorized; production execution pending"
   last_verified: "2026-11-10"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/33"
   verified:
+    - "2026-11-10: PR 58 removed the unconditional production guard after 32 offline tests and passing CI; the owner authorized one bounded production backup and confirmed independent off-host, off-USB recovery-passphrase custody. Authenticated Meshnet SSH passed. No backup has run." 
     - "2026-11-10: PR 49 merged guarded source; 31 tests and CI passed. Private control manifest entry refreshed with prior version preserved. One unused empty anonymous volume was verified and is conditionally excluded with rechecks; never deleted."
     - "2026-11-10: a networkless isolated Radarr restored an encrypted synthetic generation with sanitized current real numeric movie identifiers and monitored states, synthetic names/config/credentials and synthetic other parts; API count passed and fixtures were removed. This is not restoration of a production backup or full application configuration."
     - "A private owner-readable source/restore manifest records 13 active containers, three named volumes, 13 image identities, host service references, writable-layer differences and 54 database candidates; no credential values were copied into the manifest."
@@ -237,8 +238,8 @@ backup_issue_33:
   backup_executed: false
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "Production execution guard remains active. Off-host recovery-phrase custody, separate explicit approval for service downtime and USB write, and final privileged disk/health preflight are outstanding."
-  exact_next_action: "Obtain one explicit approval for the identified service downtime and new generation on the fingerprinted USB, including confirmation of independently accessible off-host recovery phrase. Then separately remove the execution guard through review/CI and run the bounded operator procedure; verify the actual generation and service restoration."
+  blocker: "Final interactive operator execution and privileged preflight are pending; no production backup or restore has been verified."
+  exact_next_action: "Run the authorized bounded interactive operator procedure after its final preflight; verify the actual generation, isolated representative restore and service restoration."
   remaining_prerequisites: "Final disk identity, mount state and available privileged basic health check; verify private manifest, idle writers, staging and capacity immediately before execution. After the first write, verify actual generation integrity/decryption and isolate a representative restore."
 
 browser_access_issue_52:
