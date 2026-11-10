@@ -216,7 +216,7 @@ backup_issue_33:
   last_verified: "2026-11-10"
   issue: "https://github.com/igormego/homelab-infrastructure/issues/33"
   verified:
-    - "2026-11-10: first production attempt stopped at the persistent-source open-writer guard before USB generation. All 13 expected containers recovered; checked services/timers active. A later unprivileged lsof was incomplete and found writable descriptors in already-restored containers, not a proven culprit. PR 59 adds sanitized failure identifiers; 35 offline tests passed, GitHub CI pending."
+    - "2026-11-10: first production attempt stopped at the persistent-source open-writer guard before USB generation. All 13 expected containers recovered; checked services/timers active. A later unprivileged lsof was incomplete and found writable descriptors in already-restored containers, not a proven culprit. PR 59 merged as 6f77b6b; sanitized failure identifiers, 35 offline tests and GitHub CI passed."
     - "2026-11-10: PR 58 removed the unconditional production guard after 32 offline tests and passing CI; the owner authorized one bounded production backup and confirmed independent off-host, off-USB recovery-passphrase custody. Authenticated Meshnet SSH passed. This checkpoint predates the failed first attempt." 
     - "2026-11-10: PR 49 merged guarded source; 31 tests and CI passed. Private control manifest entry refreshed with prior version preserved. One unused empty anonymous volume was verified and is conditionally excluded with rechecks; never deleted."
     - "2026-11-10: a networkless isolated Radarr restored an encrypted synthetic generation with sanitized current real numeric movie identifiers and monitored states, synthetic names/config/credentials and synthetic other parts; API count passed and fixtures were removed. This is not restoration of a production backup or full application configuration."
@@ -239,8 +239,8 @@ backup_issue_33:
   backup_executed: false\n  backup_attempted: true
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "The writer present while services were quiesced has not been identified. PR 59 diagnostic CI/review is pending; no verified production generation exists."
-  exact_next_action: "Complete review and CI for PR 59; determine the writer during a separately coordinated quiesced diagnostic before another backup attempt."
+  blocker: "The writer present while services were quiesced has not been identified. The guard now provides sanitized diagnostics; no verified production generation exists."
+  exact_next_action: "Determine the writer during a separately coordinated quiesced diagnostic before another backup attempt."
   remaining_prerequisites: "Final disk identity, mount state and available privileged basic health check; verify private manifest, idle writers, staging and capacity immediately before execution. After the first write, verify actual generation integrity/decryption and isolate a representative restore."
 
 browser_access_issue_52:
