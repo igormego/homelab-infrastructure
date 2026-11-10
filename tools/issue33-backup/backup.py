@@ -634,6 +634,47 @@ def require_no_stop_clients(proc_root=Path('/proc')):
             raise Stop("service-management process still running; operator reconciliation required")
 
 
+def require_safe_usb_recovery():
+    """Reject mounted or open USB block devices without identifying the backup disk."""
+    data = json.loads(run(["lsblk", "-J", "-p", "-o", "NAME,TYPE,TRAN,MOUNTPOINTS"]))
+    devices = data.get("blockdevices")
+    if not isinstance(devices, list):
+        raise Stop("cannot establish USB mount state")
+    paths = []
+    def inspect(node):
+        if (not isinstance(node, dict) or not isinstance(node.get("name"), str) or
+            not node["name"].startswith("/dev/") or "\n" in node["name"]):
+            raise Stop("cannot establish USB device state")
+        mounts = node.get("mountpoints")
+        if not isinstance(mounts, list) or any(not isinstance(x, (str, type(None))) for x in mounts):
+            raise Stop("cannot establish USB mount state")
+        if any(mounts):
+            raise Stop("USB storage is mounted; operator reconciliation required")
+        paths.append(node["name"])
+        children = node.get("children", [])
+        if not isinstance(children, list):
+            raise Stop("cannot establish USB device state")
+        for child in children:
+            inspect(child)
+    for device in devices:
+        if not isinstance(device, dict):
+            raise Stop("cannot establish USB device state")
+        if device.get("type") == "disk" and not device.get("tran"):
+            raise Stop("cannot establish disk transport")
+        if device.get("type") == "disk" and device.get("tran") == "usb":
+            inspect(device)
+    mounts = run(["findmnt", "-rn", "-o", "TARGET"]).decode().splitlines()
+    if any(path.startswith("/run/issue33-usb-") for path in mounts):
+        raise Stop("backup mount remains active; operator reconciliation required")
+    if paths:
+        p = subprocess.run(["lsof", "-nP", "-F", "p", "--", *paths],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if p.returncode not in (0, 1) or p.stderr.strip():
+            raise Stop("cannot establish USB device usage")
+        if p.stdout.strip():
+            raise Stop("USB storage is in use; operator reconciliation required")
+
+
 def recovery_preflight(record, username, home):
     validate_recovery_record(record)
     if current_boot_id() == record['boot_id']:
@@ -643,7 +684,7 @@ def recovery_preflight(record, username, home):
     for cmd in (["systemctl"], userctl):
         if run([*cmd, 'list-jobs', '--no-legend', '--plain']).strip():
             raise Stop("systemd has pending jobs; operator reconciliation required")
-    check_disk(home, record['uid'])  # requires the identified USB volume to be unmounted
+    require_safe_usb_recovery()
     for name, expected in record['containers'].items():
         found = docker_inspect(['inspect', name])
         if len(found) != 1 or found[0].get('Id') != expected or found[0].get('Name') != '/' + name:
@@ -681,7 +722,7 @@ def operator_recovery(record_path):
         recovery_preflight(record, user.pw_name, Path(user.pw_dir))
         restore_recorded_services(record, user.pw_name)
         print('SERVICES_RECOVERED: pending record retained; reconcile the USB generation before any future backup.')
-        if input('After separately inspecting the USB generation, type RECONCILED to clear only the pending record, or press Enter to keep it: ').strip() == 'RECONCILED':
+        if input('After independently reconciling the prior attempt and any USB generation, type RECONCILED to clear only the pending record, or press Enter to keep it: ').strip() == 'RECONCILED':
             recovery_preflight(record, user.pw_name, Path(user.pw_dir))
             for name in record['containers']:
                 if docker_inspect(['inspect', name])[0].get('State', {}).get('Running') is not True:

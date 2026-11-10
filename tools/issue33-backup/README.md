@@ -12,11 +12,12 @@ services after settled failures. An uncertain stop or process death leaves a
 durable pending record; it does not restart services automatically. After a
 reboot, an operator may run the reviewed root-owned script with
 `--recover-services` via interactive sudo. Recovery checks the saved operator,
-container identities, service states, stop clients and systemd jobs, and
-requires the identified USB volume to be unmounted. It asks for `RECOVER`,
+container identities, service states, stop clients and systemd jobs. It rejects
+mounted or open USB block devices and remaining backup mounts without requiring
+the backup disk's serial fingerprint. It asks for `RECOVER`,
 then starts only services recorded as previously active. The pending record is
-retained for operator reconciliation; after separately inspecting the USB
-generation the operator may rerun recovery and explicitly type `RECONCILED`
+retained for operator reconciliation; after independently reconciling the prior
+attempt and any USB generation the operator may explicitly type `RECONCILED`
 to clear only that record. No backup is retried or overwritten.
 Uncatchable interruption during USB access can leave the disk mounted.
 Encrypted staging and incomplete generations may remain after failure.
