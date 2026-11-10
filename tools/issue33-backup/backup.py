@@ -165,15 +165,46 @@ def validate_workload(profile):
         c = byname[expected["service"]]
         if c["Image"] != expected["image_id"] or normalized_mounts(c["Mounts"]) != normalized_mounts(expected["mounts"]):
             raise Stop("container image or mounts changed since private inventory")
+    validate_volumes()
+    return byname
+
+
+def validate_volumes():
+    """Exclude at most one empty, unreferenced anonymous volume; never mutate it."""
     volumes = set(run(["docker", "volume", "ls", "-q"]).decode().split())
-    if volumes != EXPECTED_VOLUMES:
+    extra = volumes - EXPECTED_VOLUMES
+    if not EXPECTED_VOLUMES.issubset(volumes) or len(extra) > 1:
         raise Stop("Docker volumes differ from private inventory")
     info = docker_inspect(["volume", "inspect", *sorted(volumes)])
+    if len(info) != len(volumes) or {v.get("Name") for v in info} != volumes:
+        raise Stop("Docker volume inventory is incomplete")
     for v in info:
         expected = f"/var/lib/docker/volumes/{v['Name']}/_data"
         if v.get("Driver") != "local" or v.get("Mountpoint") != expected or os.path.realpath(expected) != expected:
             raise Stop("unexpected Docker volume backing path")
-    return byname
+        if v["Name"] in extra:
+            labels = v.get("Labels")
+            if (not re.fullmatch(r"[0-9a-f]{64}", v["Name"])
+                    or not isinstance(labels, dict) or "com.docker.volume.anonymous" not in labels):
+                raise Stop("additional volume is not the reviewed anonymous volume type")
+            try:
+                with os.scandir(expected) as entries:
+                    if next(entries, None) is not None:
+                        raise Stop("additional anonymous volume is not empty")
+            except OSError:
+                raise Stop("cannot verify additional volume is empty") from None
+    if extra:
+        ids = run(["docker", "ps", "-aq", "--no-trunc"]).decode().split()
+        containers = docker_inspect(["inspect", *ids]) if ids else []
+        if len(containers) != len(ids):
+            raise Stop("cannot verify additional volume references")
+        for c in containers:
+            mounts = c.get("Mounts")
+            if not isinstance(mounts, list):
+                raise Stop("cannot verify additional volume references")
+            if any(m.get("Type") == "volume" and m.get("Name") in extra for m in mounts):
+                raise Stop("additional anonymous volume is referenced")
+    return frozenset(extra)
 
 
 def active(cmd, unit):
@@ -1030,6 +1061,7 @@ def main():
         raise Stop("private profile has no preselected unique generation name")
     device = check_disk(home, uid)
     containers = validate_workload(profile)
+    excluded_volumes = validate_volumes()
     if shutil.disk_usage("/data").free < MIN_SOURCE_RESERVE + FIVE_GIB:
         raise Stop("insufficient staging space")
     if input("Type STORED to confirm off-host custody and independent recovery test: ").strip() != "STORED":
@@ -1085,6 +1117,8 @@ def main():
             parts.append((encrypt_bytes(stage, gpg_home, secret, "source-manifest.json.gpg", profile_bytes), "metadata"))
             parts.append((snapshot_radarr(stage, gpg_home, secret), "sqlite"))
             require_no_writers(home, volume_roots)
+            if validate_volumes() != excluded_volumes:
+                raise Stop("excluded volume inventory changed during capture")
             if persistent_tree_fingerprint(home, volume_roots) != before:
                 raise Stop("persistent source changed during the snapshot")
         # Services are back before any USB mount or copy.

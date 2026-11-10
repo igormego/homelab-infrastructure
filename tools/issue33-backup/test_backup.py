@@ -54,6 +54,35 @@ class ProfileTests(unittest.TestCase):
         current = [{"Type": "bind", "Source": "/a", "Destination": "/b", "RW": False}]
         self.assertNotEqual(b.normalized_mounts(old), b.normalized_mounts(current))
 
+    def test_extra_volume_excluded_only_when_anonymous_empty_and_unreferenced(self):
+        extra = "a" * 64
+        volumes = sorted(b.EXPECTED_VOLUMES | {extra})
+        info = [{"Name": n, "Driver": "local", "Mountpoint": "/var/lib/docker/volumes/" + n + "/_data",
+                 "Labels": {"com.docker.volume.anonymous": ""} if n == extra else {}} for n in volumes]
+        def run(argv, **kwargs):
+            if argv[1:3] == ["volume", "ls"]: return ("\n".join(volumes)).encode()
+            if argv[1:3] == ["ps", "-aq"]: return b"fixture-id"
+            raise AssertionError(argv)
+        class Entries:
+            def __init__(self, values): self.values = iter(values)
+            def __enter__(self): return self.values
+            def __exit__(self, *args): return False
+        with mock.patch.object(b, "run", side_effect=run), \
+             mock.patch.object(b.os.path, "realpath", side_effect=lambda p: p), \
+             mock.patch.object(b.os, "scandir", return_value=Entries([])), \
+             mock.patch.object(b, "docker_inspect", side_effect=[info, [{"Mounts": []}]]):
+            b.validate_volumes()
+        with mock.patch.object(b, "run", side_effect=run), \
+             mock.patch.object(b.os.path, "realpath", side_effect=lambda p: p), \
+             mock.patch.object(b.os, "scandir", return_value=Entries([object()])), \
+             mock.patch.object(b, "docker_inspect", return_value=info):
+            with self.assertRaisesRegex(b.Stop, "not empty"): b.validate_volumes()
+        with mock.patch.object(b, "run", side_effect=run), \
+             mock.patch.object(b.os.path, "realpath", side_effect=lambda p: p), \
+             mock.patch.object(b.os, "scandir", return_value=Entries([])), \
+             mock.patch.object(b, "docker_inspect", side_effect=[info, [{"Mounts": [{"Type": "volume", "Name": extra}]}]]):
+            with self.assertRaisesRegex(b.Stop, "referenced"): b.validate_volumes()
+
     def test_fail_on_unexpected_running_container(self):
         with mock.patch.object(b, "run", return_value=b"one\n"):
             with self.assertRaisesRegex(b.Stop, "container count"):

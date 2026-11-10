@@ -34,3 +34,8 @@ approval for service interruption, writable mount and backup generation.
 Run the synthetic unit tests with `python -m unittest discover -s . -p
 'test_*.py'`. An actual restore requires a separately approved, isolated Linux
 environment and protection for any decrypted credentials.
+
+The workload preflight may exclude at most one additional anonymous local Docker
+volume only if its backing directory is empty and no running or stopped container
+references it. The volume is never modified or deleted. The same check is repeated
+after capture; a nonempty, referenced, inaccessible or changed volume fails closed.
