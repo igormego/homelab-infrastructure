@@ -1,9 +1,10 @@
 # Issue 33 backup prototype
 
-**Draft: production execution is disabled.** No production backup or full
-restore has been performed. Do not remove the execution guard until writer
-quiescence, recovery after interruption and an isolated application restore
-using the actual restored state have been reviewed and tested.
+**The first production execution is explicitly owner-authorized, but has not
+been performed.** Execution requires an interactive root operator, the exact
+private inventory and USB identity, off-host recovery-phrase custody, and all
+existing preflight and recovery checks. A production backup or full restore is
+not claimed until independently verified.
 
 This prototype uses a private host manifest, verifies the USB identity and
 streams archives through GPG. It attempts to restart previously running

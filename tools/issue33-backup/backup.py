@@ -1034,7 +1034,6 @@ def main():
         return
     if not args.execute:
         raise Stop("no action: the separately approved --execute flag is required")
-    raise Stop("production execution disabled: integrated restore and consistency review are incomplete")
     if pwd is None or not hasattr(os, "geteuid") or os.geteuid() != 0 or not sys.stdin.isatty():
         raise Stop("run as root in an interactive operator TTY")
     verify_root_owned_script()
