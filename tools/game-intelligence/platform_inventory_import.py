@@ -209,7 +209,7 @@ def ensure_platform_table(con: sqlite3.Connection) -> None:
     if record is None:
         con.execute(CREATE_TABLE)
         return
-    normalize = lambda value: " ".join(value.split())
+    normalize = lambda value: " ".join(value.replace("IF NOT EXISTS ", "").split())
     if normalize(record[0]) == normalize(CREATE_TABLE):
         return
     if normalize(record[0]) != normalize(CREATE_TABLE_V1):
