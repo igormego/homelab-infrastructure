@@ -16,6 +16,21 @@ spec.loader.exec_module(b)
 
 
 class ProfileTests(unittest.TestCase):
+    def test_execution_requires_explicit_flag_and_privileged_interactive_operator(self):
+        import sys
+        with mock.patch.object(sys, "argv", ["backup.py"]), \
+             mock.patch.object(b, "run") as external:
+            with self.assertRaisesRegex(b.Stop, "--execute"):
+                b.main()
+            external.assert_not_called()
+        with mock.patch.object(sys, "argv", ["backup.py", "--execute"]), \
+             mock.patch.object(b, "pwd", object()), \
+             mock.patch.object(b.os, "geteuid", return_value=1000, create=True), \
+             mock.patch.object(b, "verify_root_owned_script") as check:
+            with self.assertRaisesRegex(b.Stop, "root in an interactive"):
+                b.main()
+            check.assert_not_called()
+
     def test_orphaned_cron_process_blocks_quiescence(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as tmp:
             group = Path(tmp)
