@@ -238,8 +238,8 @@ backup_issue_33:
   backup_executed: false
   restore_tested: false
   capacity_status: "After approved cleanup the disk reported approximately 1857.65 GiB free; revalidate available space and archive-size guards before any separately approved backup write."
-  blocker: "Final interactive operator execution and privileged preflight are pending; no production backup or restore has been verified."
-  exact_next_action: "Run the authorized bounded interactive operator procedure after its final preflight; verify the actual generation, isolated representative restore and service restoration."
+  blocker: "An operator-accessible interactive terminal could not be established: computer-use blocked PowerShell and detached launches produced no visible window. Privileged preflight, production backup and restore remain pending."
+  exact_next_action: "Establish an authorized operator-accessible private interactive terminal; run the bounded procedure after final preflight and verify the actual generation, isolated representative restore and service restoration."
   remaining_prerequisites: "Final disk identity, mount state and available privileged basic health check; verify private manifest, idle writers, staging and capacity immediately before execution. After the first write, verify actual generation integrity/decryption and isolate a representative restore."
 
 browser_access_issue_52:
