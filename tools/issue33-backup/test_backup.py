@@ -131,6 +131,16 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(result, " process=worker owner=example.service")
         self.assertNotIn("/private", result)
 
+    def test_writer_guard_reports_safe_identifiers_and_still_stops(self):
+        result = mock.Mock(returncode=0, stderr=b"", stdout=b"p42\nf4\naw\nn/private/secret\n")
+        with mock.patch.object(b.os.path, "isdir", return_value=True), \
+             mock.patch.object(b.subprocess, "run", return_value=result), \
+             mock.patch.object(b, "writer_process_identity", return_value=" process=worker owner=unknown"):
+            with self.assertRaises(b.Stop) as failure:
+                b.require_no_writers(Path("fixture"), {})
+        self.assertIn("pid=42 fd=4 access=w", str(failure.exception))
+        self.assertNotIn("/private", str(failure.exception))
+
     def test_read_error_during_writer_check_is_not_clear(self):
         result = mock.Mock(returncode=1, stdout=b"", stderr=b"warning")
         with mock.patch.object(b.os.path, "isdir", return_value=True), \
