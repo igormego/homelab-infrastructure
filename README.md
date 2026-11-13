@@ -53,6 +53,7 @@ See [Architecture](docs/architecture.md) for current boundaries.
 | [Desktop migration milestone](docs/migration-milestone-2026-09-01.md) | Evidence-backed desktop cutover milestone |
 | [Roadmap](docs/roadmap.md) | Now, next, blocked, later, and open decisions |
 | [Security](docs/security.md) | Public-repository and operational safety rules |
+| [Book Intelligence planning](docs/book-intelligence.md) | Planned Goodreads export audit workflow; no implementation or deployment |
 | [Movie Intelligence read contract](tools/movie-intelligence/README.md) | Read-only module, fixtures, contract and later live acceptance |
 | [ADR 001](docs/decisions/001-use-ubuntu-server-24-04-lts.md) | Ubuntu Server selection |
 
