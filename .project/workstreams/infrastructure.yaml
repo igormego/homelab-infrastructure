@@ -11,16 +11,25 @@ status: "active"
 phase: "post-migration-operations-and-agent-control-plane"
 
 current_gate: >
-  Movie Intelligence #26 LIVE read-only inventory was accepted 2026-11-09:
-  690 records, 565 watched, 125 CSFD watchlist, 50 playable Plex Movies,
-  all four source inventories complete and PAB v0.1 aggregate validated.
-  All 125 watchlist dispositions remain unresolved, so no missing-film
-  conclusion follows. PR #55 now source-ready/CI-green adds one-pass
-  aggregate-only identity/reason diagnostics; no actual diagnosis run yet.
-  Private snapshot publication, PAB control mount and ChatGPT Media read
-  remain unaccepted. Separately, 39 Trakt proposals remain unapproved.
+  2026-11-14: owner resumed backup/restore Issue #33 after the 2026-11-10 pause.
+  Production backup remains BLOCKED: the intended 2 TB NTFS USB target has
+  45,330 verified $Bitmap cluster-accounting mismatches (2026-11-10 read-only
+  inspection), unverified usable capacity and an unresolved serial fingerprint.
+  No repair, reformat or USB write is authorized. The existing PAB Control
+  bridge returned a correlated, fresh host-audit snapshot on 2026-11-14,
+  but that read-only capability provides neither USB health nor privileged
+  execution. Existing backup source and prior synthetic tests are preserved.
 
 current_state: >
+  2026-11-14: read-only PAB homelab.audit via private Core Issue #124 completed;
+  snapshot at 22:02:16 UTC showed 13 containers running, zero unhealthy, and
+  11,762 GiB free on /data. This does not inspect USB health or prove a backup.
+  Last exact NTFS inspection (2026-11-10) failed with 45,330 cluster accounting
+  mismatches; no destination repair, disk mutation, production generation or
+  fresh restore acceptance. GitHub ChatGPT session has no machine-local SSH
+  identity/Local Codex execution route; PAB #83 owns a reusable guarded host
+  resource/effect broker. Earlier Movie Intelligence history below remains
+  historical and does not supersede this current backup gate.
   2026-11-09 LIVE read-only Movie Intelligence inventory #26 completed:
   690 total, 565 watched, 125 CSFD watchlist, 50 playable main Plex Movies.
   Four complete sources and PAB v0.1 validation passed; all 125 watchlist
@@ -101,17 +110,21 @@ current_state: >
   has now been checked successfully under Issue 13.
 
 exact_next_action: >
-  For Movie Intelligence #26, execute one private read-only
-  watchlist_collect.py --diagnose-identities from merged PR #55 through
-  the existing Codex Desktop Local/Meshnet operator context. Return only
-  sanitized canonical-ID coverage and unresolved reason counts; no raw
-  titles/IDs/credentials, third-party lookups, enrichment, downloads or
-  state mutations. Choose the smallest subsequent remediation from evidence.
-  PAB #83 read-only private snapshot publication/control mount is a
-  separate review gate; the 39-entry Trakt history proposal separately
-  requires its own authorization.
+  For backup Issue #33, first establish a healthy, physically separate,
+  identity-verified target without losing existing USB contents. Obtain fresh
+  trusted-operator filesystem consistency/capacity evidence; repair/format
+  or alternate-target writes need exact separate approval where consequential.
+  The currently accessible PAB bridge supports host audit only, not privileged
+  storage inspection or backup execution; use existing local-homelab-admin
+  operator authority when genuinely available, otherwise keep blocked.
+  Only then perform one already scoped reviewed encrypted backup with intact
+  service quiescence/recovery guards and independent isolated restore evidence.
+  For future autonomous work, evolve PAB #83's existing typed
+  resource/approval/effect lane rather than adding a special backup capability.
 
-blockers: []
+blockers:
+  - "Issue #33: USB NTFS metadata inconsistent (2026-11-10; 45,330 bitmap mismatches), usable capacity unverified and private disk identity not re-baselined; no safe writable target accepted."
+  - "Current ChatGPT runtime lacks the machine-local SSH/Codex Desktop executor and general privileged host effect; PAB read-only audit bridge does not inspect or repair storage."
 
 dependencies:
   - project: "Homelab & Media Stack"
@@ -161,8 +174,10 @@ portfolio:
     path to a fixed adapter, live acceptance and then controlled Seerr actions.
 
 verification:
-  last_verified: "2026-11-09"
+  last_verified: "2026-11-14"
   sources:
+    - "2026-11-14: private Project OS control Issue #124, fresh 22:02:16 UTC homelab.audit snapshot: 13 running Docker containers, none unhealthy, /data 11,762 GiB free. Not a USB check or backup completion."
+    - "2026-11-14 owner resumption and source/current-gate reconciliation: Homelab Issue #33, latest 2026-11-10 exact read-only ntfsresize inconsistency and pause; no subsequent host mutation."
     - "2026-11-09 source-only: PR #54 merged as f4d7548c67feeae99214619b858e578e1b543cea; Movie Intelligence Actions node-tests PASS. No host execution or private resource permission."
     - "2026-11-09 source-only: PR #53 merged as 238bb14788609f510ec5a43d23349ab6f197ead6; pure classifier CI PASS; PAB #92 aggregate contract merged separately."
     - "2026-10-05 follow-up: five additional identity pairs verified; 40 qualified, 39 safe read-only proposals, one Plex-link exclusion, zero cohort duplicates; six accepted history events unchanged. Private evidence retained."
