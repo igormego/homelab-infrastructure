@@ -80,3 +80,39 @@ generic diagnostic resource to the existing Personal AI Brain Resource
 Broker. Future ordinary ChatGPT requests should receive the verified,
 time-stamped result without manual screenshot, CLI prompt or Codex task.
 No service write/grant follows from read-only acceptance.
+
+## Maintainerr cleanup countdown (source-only)
+
+`maintainerr_audit.py` provides a generic read-only inspection of a named show
+(default `Lanterns`) against current Plex TV show identities and Maintainerr's
+**local collection membership**. It computes the action deadline from the
+Maintainerr membership `addDate + deleteAfterDays`, exposes the configured
+action code, collection ID and safe rule descriptors if the collection record
+provides a canonical rule-group ID. A missing/null deletion window is treated
+conservatively: the handler may act immediately, even if the UI renders no date.
+
+It deliberately never calls `GET /api/collections/deactivate/{id}` or
+`GET /api/collections/activate/{id}` — **these GET routes mutate state**.
+It never calls credential-bearing `GET /api/rules` or
+`GET /api/rules/{id}` (both return unmasked notification secrets), and it
+never runs `POST /api/rules/test` (which flushes multiple service caches),
+manual collection handling, Sonarr/Plex mutations or exclusions. Stored rule
+rows read from the narrow `/api/rules/{id}/rules` endpoint are sanitized:
+no custom input text or usernames are exported. Membership alone confirms
+which collection schedules an item, **not** why every predicate matched.
+
+Host-only trusted configuration: `MAINTAINERR_BASE_URL`, `PLEX_BASE_URL`,
+`PLEX_TOKEN`, `PLEX_TV_LIBRARY_ID`. Preserve private output locally, never
+publish runtime responses or private endpoints. This CLI is not a ChatGPT
+connector or deployed service. Its read-only GET calls are permitted only from
+an approved local operator/network context, as Maintainerr has **no native
+API authentication**. Do not expose Maintainerr publicly for this tool.
+
+Potentially destructive action remains unknown until the real collection's
+settings and its configured Sonarr action are inspected. No rules are modified,
+no deadline is postponed and **Lanterns is not yet protected by a source PR**.
+The live host acceptance and reusable connected read path remain under Media
+Issue #62 and PAB #83. If the user wants the series protected before the
+countdown reaches zero, a scoped Maintainerr **Exclusion** via its trusted UI is
+the immediate operational mitigation; merely disabling the rule group need not
+empty its already populated collection. Do not call a handling endpoint.
