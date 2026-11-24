@@ -109,6 +109,18 @@ media_readonly_diagnostics:
   permission_boundary: "Normal ChatGPT/GitHub connector has no private Homelab SSH or internal service API. PAB media.resource_read currently source-only and limited to sonarr/overview; no general live episode query. PAB #83 has cross-owner comment to reuse typed Resource Broker/effect policy for media.inspect rather than bespoke tool/runner. No user copy/paste should be routine when this host connector is accepted."
   next_action: "Using the existing machine-local Meshnet operator path or future approved PAB Resource Broker, run the source-tested GET-only probe for canonical latest Dexter episode and appropriate Carrie movie(s). Verify actual Plex part paths and inodes only under allowed media roots, inspect Bazarr release/profile/score evidence, distinguish measured playback bitrate versus file metadata, and report grounded root causes. No subtitle search, download, broad Plex rescan, delete, watched writes or quality changes without separate evidence and policy."
 
+my_cinema_retention_policy:
+  status: "Planned - owner approved design only; no deployment or deletion authorization"
+  approved_on: "2026-11-25"
+  authority: "https://github.com/igormego/homelab-infrastructure/issues/46#issuecomment-7147774772"
+  policy: "Movies only; lifetime Watched history independent of playable Movies and To Watch. Archive immediately after verified completion; coexistence of archive and playable item is intended. Daily eligibility after 14 days since latest verified completion of current acquired asset; historical watched status alone is insufficient, reacquisition resets eligibility."
+  protection: "Explicit favourites, keep-forever, optional temporary hold, active playback, incomplete playback and in-progress rewatch. Unknown or stale identity, file generation, protection or archive evidence blocks removal. Rating-based favourite mapping is a later option."
+  effect: "Future separately approved executor removes only intended playable payload, preserves Radarr record and archive metadata/placeholder/history, unmonitors movie and verifies real availability. Exactly one executor: Maintainerr only if all guards supported, otherwise existing lifecycle controller. No TV cleanup."
+  presentation: "Kometa Watched collections by recency, favourites, genre, director, decade, year and rewatch candidates; Movies Keep Forever and Leaving Soon. Re-download explicit through existing guarded Seerr/owner UI; Samsung native button unverified."
+  roadmap: "Existing #46 host gate and bounded archive import -> full eligible history -> Kometa Watched -> automatic forward-fill -> read-only retention planner/Leaving Soon -> separately authorized exact single-film removal -> separately approved automatic retention -> redownload lifecycle acceptance."
+  next_action: "Resolve urgent Maintainerr #62 live safety status; then follow existing #46 loopback UI GET/plan and disposable synthetic-only acceptance gate before scaling archive. Do not deploy or delete on design approval."
+  blocker: "No live host acceptance for source-only PRs #43-45; #62 current action/outcome unknown and must be resolved before automatic retention. Maintainerr guard feasibility and native Plex redownload UI unverified."
+
 my_cinema_ui_and_lifecycle_source:
   status: "Source-tested and merged, NOT deployed or live-accepted"
   verified_on: "2026-11-04"
@@ -238,6 +250,10 @@ current_state: >
   that policy until its seeding requirements are known.
 
 exact_next_action: >
+  Priority: establish current Maintainerr #62 safety/outcome through a trusted authorized operator.
+  My Cinema #46 owner-approved retention design (2026-11-25) is planned only; next existing
+  gate is loopback UI GET/plan and synthetic-only acceptance, then bounded historical archive.
+  Do not activate removal or deploy on design approval. Preserve existing independent gates below.
   Optionally observe natural Trending below-minimum deletion/recovery and gather feedback on the
   five Movies collections. Do not add remaining Movies concepts or TV v2 implicitly.
   Plex Pass is only a prerequisite for optional future Home/Recommended publishing.
@@ -251,6 +267,7 @@ exact_next_action: >
   contradicts the accepted behavior.
 
 blockers:
+  - "Maintainerr #62 current live outcome unknown; resolve unsafe cleanup before enabling My Cinema retention."
   - "First media.db -> Trakt POST is durably ambiguous: exactly one POST was attempted, read-back found 0 events, and automatic retry is forbidden pending audit classification."
   - "Safe programmable Plex historical watched-date writes remain unconfirmed."
 
@@ -267,7 +284,7 @@ important_open_loops:
   - "Plex watched-date preflight (2026-10-20): 49 current films, 5 exact identity matches and 2 state differences. User confirmed 28 Days Later was seen on VHS long ago but downloaded for possible rewatch, so Plex Unwatched is intentional; withdraw first-write proposal and do not auto-sync historical watched into Plex. Keep approximate watched dates in media.db/Trakt with provenance. Dune resume/timestamp must remain intact."
   - "My Cinema: Zodiac/Heretic Samsung acceptance done. PR #43 owner UI, #44 read-only lifecycle planner, #45 cap-5 fingerprint-approved archive batch are merged and CI accepted source-only. Homelab Issue #46 is the sole durable remaining host acceptance gate: machine-local Meshnet operator, loopback UI GET/plan, safe disposable synthetic placeholder retirement/rearm, then bounded archival batch. No host deployment, actual reacquisition, bulk import or real-file deletion. Malignant stale Seerr status remains separate."
   - "Posterizarr / Kometa local poster-background assets is a deferred visual enhancement candidate for Movies and later Watched; keep out of current implementation until archive and reacquisition lifecycle works."
-  - "Do not start historical Plex backfill implicitly."
+  - "Owner-approved My Cinema historical Watched shelf backfill is planned; use existing #46 bounded acceptance first, never implicit bulk import or Plex watched-flag writes. Retention design is approved, not live effects."
   - "Plan layered server backup/restore for configuration, databases and durable media-brain state."
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
   - "Samsung Walter Mitty playback with SRT remains unresolved; client debug logs were successfully captured but contain no explicit decoder/MediaSource error. After buffering at 21:36.366, play() interruption warning occurred later. Next: sanitize the evidence for the related Plex forum report and seek deeper Samsung HTML player telemetry; no repeat-only test."
@@ -276,6 +293,7 @@ important_open_loops:
   - "Radarr audio policy deployed and API-verified on 2026-10-19: four compatible audio CFs +1, ten other audio CFs 0; CF cutoff 0 with quality upgrades retained. Future guide sync needs separate drift review (latest preview adds IMF +20); Sonarr unchanged."
 
 stale_or_unknown:
+  - "Maintainerr #62 countdown reported 2026-11-17 was 8 days; as of 2026-11-25 no verified live action, membership, protection or outcome."
   - "The first outbound write was attempted exactly once but remains ambiguous; no matching history event is visible and no rollback history ID exists."
 
 portfolio:
@@ -287,8 +305,9 @@ portfolio:
     explicit; general platform work may continue independently.
 
 verification:
-  last_verified: "2026-10-19"
+  last_verified: "2026-11-25"
   sources:
+    - "2026-11-25 owner approval of My Cinema retention design only; no new host verification or effects. https://github.com/igormego/homelab-infrastructure/issues/46#issuecomment-7147774772"
     - "2026-10-19 approved Radarr profile 9 deployment: Recyclarr 8.7.1 baseline-resource preview and one Radarr-only sync exit 0; API comparison verified only 14 audio scores and cutoffFormatScore 10000 -> 0 changed. All other profiles, 47 non-audio scores, CF definitions, quality definitions and Sonarr preserved; private rollback retained."
     - "2026-10-19 user-provided read-only Codex Radarr/Sonarr profile audit and Plex Dashboard screenshot: Radarr 9 high lossless audio scores, Sonarr 7 no audio scores, Sonarr 5 no 1080p fallback, Recyclarr-managed profiles; burn-in yields video and audio transcode. No profile writes or long-duration playback acceptance."
     - "2026-10-19 Codex client-log follow-up supplied by user: Samsung Plex 5.94.1/Tizen 9; SRT decoded 15 entries before buffering at 21:36.366 (15:52:30 CEST), later HTMLPlayer play()/pause() warning at 15:53:25, client stopped 15:54:11; no decoder, DASH, MediaSource or parser error captured. Earlier 23/23 HTTP 200 observations refer to separate session."
