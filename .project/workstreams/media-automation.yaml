@@ -211,6 +211,16 @@ plex_watched_history_backfill:
   preservation: "Preflight read-only: no Plex, Trakt, ledger, service or repository code/config changes; Mortgully ambiguous Trakt POST remains no-retry."
   next_action: "Zodiac placeholder PoC achieved server PASS and user-confirmed Samsung item visibility in Watched — Test. Before scaling, validate actual Samsung poster/details (not yet separately reported), then scope one reversible end-to-end lifecycle transition for a verified historical movie, preserving Plex/Radarr identity, no-files semantics and manual file-retention control. Avoid mass imports, Plex watched writes, or Trakt writes."
 
+serialzone_tv_ingestion:
+  status: "Component-tested - source merged; not host-deployed"
+  verified_on: "2026-11-25"
+  issue: "https://github.com/igormego/homelab-infrastructure/issues/66"
+  source: "PR #67 squash merged 828295655e3d71d982ec93393e8e5020a5af01af; GitHub Actions run 45515625744 passed Python and Node suites including six new synthetic SerialZone tests."
+  scope: "Five public profile list types; bounded completeness/pagination checks; personal ratings and source dates; separate source-state tables within existing media.db; private SQLite backup on initial creation; aggregate-only logs; weekly systemd timer templates. No competing DB, canonical mutation, or live effects."
+  inference: "Owner approved first N episodes in verified series order as approximate historical watched membership; tested helper with unknown dates, exact-state precedence and reversible count correction. Canonical identity/episode ordering and persisted inferred membership integration are not yet implemented."
+  blocker: "Current ChatGPT/GitHub connector lacks the trusted local Homelab operator capability. Actual host schema, direct personal importer fetch, initialization and timer not accepted. Respect robots policy; no access bypass or AI crawler."
+  next_action: "Existing local-homelab-admin operator: inspect schema/ledger/runtime/backup and schedule, run one private collect-only acceptance, initialize additive projection with SQLite backup and invariant checks, replay, install reviewed weekly timer and verify natural firing. Then canonical TV identity and episode ordering integration. Keep #66 open."
+
 current_gate: >
   Kometa Phase 2A ordinary Movies collections are accepted independently of Plex Pass.
   Scheduled execution and daily/Thursday rotation are runtime accepted; the Trending
@@ -250,6 +260,8 @@ current_state: >
   that policy until its seeding requirements are known.
 
 exact_next_action: >
+  SerialZone #66 source-only slice merged and CI accepted; next gate is trusted local operator
+  acceptance per serialzone_tv_ingestion and SERIALZONE.md, not another speculative parser rewrite.
   My Cinema #46 owner-approved retention design (2026-11-25) is planned only; next existing
   gate is loopback UI GET/plan and synthetic-only acceptance, then bounded historical archive.
   Do not activate removal or deploy on design approval. Preserve existing independent gates below.
@@ -279,6 +291,7 @@ dependencies:
     dependency: "Hardlink topology and the one-minute public-indexer cleanup path are both accepted end-to-end; Sk-CzTorrent remains intentionally outside that cleanup policy."
 
 important_open_loops:
+  - "SerialZone #66: PR #67 merged and CI green; direct host collection, actual additive DB initialization, canonical TV identity/episode mapping and weekly timer remain unaccepted. No live access from this chat."
   - "Classify the sanitized original Mortgully POST response/audit. Keep delivery ambiguous unless the evidence definitively proves no Trakt event was created; only then consider one explicit retry."
   - "Plex watched-date preflight (2026-10-20): 49 current films, 5 exact identity matches and 2 state differences. User confirmed 28 Days Later was seen on VHS long ago but downloaded for possible rewatch, so Plex Unwatched is intentional; withdraw first-write proposal and do not auto-sync historical watched into Plex. Keep approximate watched dates in media.db/Trakt with provenance. Dune resume/timestamp must remain intact."
   - "My Cinema: Zodiac/Heretic Samsung acceptance done. PR #43 owner UI, #44 read-only lifecycle planner, #45 cap-5 fingerprint-approved archive batch are merged and CI accepted source-only. Homelab Issue #46 is the sole durable remaining host acceptance gate: machine-local Meshnet operator, loopback UI GET/plan, safe disposable synthetic placeholder retirement/rearm, then bounded archival batch. No host deployment, actual reacquisition, bulk import or real-file deletion. Malignant stale Seerr status remains separate."
@@ -306,6 +319,7 @@ portfolio:
 verification:
   last_verified: "2026-11-25"
   sources:
+    - "2026-11-25 SerialZone PR #67 merged 828295655e3d71d982ec93393e8e5020a5af01af; CI run 45515625744 success; no host effects."
     - "2026-11-25 owner approval of My Cinema retention design only; no new host verification or effects. https://github.com/igormego/homelab-infrastructure/issues/46#issuecomment-7147774772"
     - "2026-10-19 approved Radarr profile 9 deployment: Recyclarr 8.7.1 baseline-resource preview and one Radarr-only sync exit 0; API comparison verified only 14 audio scores and cutoffFormatScore 10000 -> 0 changed. All other profiles, 47 non-audio scores, CF definitions, quality definitions and Sonarr preserved; private rollback retained."
     - "2026-10-19 user-provided read-only Codex Radarr/Sonarr profile audit and Plex Dashboard screenshot: Radarr 9 high lossless audio scores, Sonarr 7 no audio scores, Sonarr 5 no 1080p fallback, Recyclarr-managed profiles; burn-in yields video and audio transcode. No profile writes or long-duration playback acceptance."
