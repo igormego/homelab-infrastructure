@@ -93,13 +93,13 @@ posterizarr_assets_idea:
   priority: "Someday/not in current My Cinema Zodiac/reacquisition scope. No installation or config edits authorized."
 
 maintainerr_cleanup_safety:
-  status: "OPEN / live host not inspected; source-only read inspector merged"
+  status: "Verified - owner confirmed correct display and closed incident #62"
   reported_on: "2026-11-17"
-  affected: "Lanterns TV appears in user's Maintainerr collection view with 8-day countdown and deletion icon; user reports never watching show. Collection/rule/action not yet identified live."
-  research: "Official Maintainerr docs confirm upper-right numeral is days until handling. Collection membership countdown uses addDate and deleteAfterDays; null can be due immediately in handler. GET activate/deactivate mutate state; broad GET rules includes unmasked notification secrets. Exclusion is the safe scoped protection, but no exclusion was applied."
-  source: "PR #63 squash merged aabf77bf892a6490a39753ef670d991eaefccafa, GitHub Actions Python media tests PASS; tools/media-diagnostics/maintainerr_audit.py matches Plex TV ratingKey to Maintainerr's own overlay membership, inspects exact collection and narrow rule rows without dangerous GET/POST routes. Code not deployed; no server evidence or change."
-  blocker: "Current ChatGPT GitHub access cannot reach private Maintainerr; machine-local operator credentials and PAB #83 generic Media Resource Broker host deployment are separate. User requested direct diagnosis and prevention, which cannot be honestly claimed through source/CI only."
-  next_action: "URGENT: use an actually authorized trusted operator path to inspect Lanterns' exact collection/rule/action and apply scoped exclusion if deletion would be unintended, before the 8-day countdown expires. Then verify nonmembership/exclusion and examine related false positives. For future requests integrate the source inspector into PAB #83 read-only resource path; do not expose unauthenticated Maintainerr API publicly. No host mutation currently made."
+  resolved_on: "2026-11-25"
+  issue: "https://github.com/igormego/homelab-infrastructure/issues/62"
+  evidence: "Owner confirmed Lanterns displays correctly. Read-only Homelab check found eight episodes and zero watched in Plex and eight episode files reported by Sonarr. No matching Maintainerr container, systemd service or default-port listener was found on that host."
+  uncertainty: "The original screenshot UI and icon remain unverified. Plex show posters can display the unwatched episode count. No deletion rule, action or deadline was verified. No host or media changes were made."
+  source: "PR #63 merged aabf77bf892a6490a39753ef670d991eaefccafa with media diagnostics CI passing. The Maintainerr inspector remains source-only. The workstream can continue with the existing My Cinema #46 acceptance gate."
 
 media_readonly_diagnostics:
   status: "Source-tested in GitHub Actions; not deployed or live-accepted"
@@ -118,8 +118,8 @@ my_cinema_retention_policy:
   effect: "Future separately approved executor removes only intended playable payload, preserves Radarr record and archive metadata/placeholder/history, unmonitors movie and verifies real availability. Exactly one executor: Maintainerr only if all guards supported, otherwise existing lifecycle controller. No TV cleanup."
   presentation: "Kometa Watched collections by recency, favourites, genre, director, decade, year and rewatch candidates; Movies Keep Forever and Leaving Soon. Re-download explicit through existing guarded Seerr/owner UI; Samsung native button unverified."
   roadmap: "Existing #46 host gate and bounded archive import -> full eligible history -> Kometa Watched -> automatic forward-fill -> read-only retention planner/Leaving Soon -> separately authorized exact single-film removal -> separately approved automatic retention -> redownload lifecycle acceptance."
-  next_action: "Resolve urgent Maintainerr #62 live safety status; then follow existing #46 loopback UI GET/plan and disposable synthetic-only acceptance gate before scaling archive. Do not deploy or delete on design approval."
-  blocker: "No live host acceptance for source-only PRs #43-45; #62 current action/outcome unknown and must be resolved before automatic retention. Maintainerr guard feasibility and native Plex redownload UI unverified."
+  next_action: "Follow existing #46 loopback UI GET/plan and disposable synthetic-only acceptance gate before scaling archive. Deployment and removal require separate authorization."
+  blocker: "No live host acceptance for source-only PRs #43-45. Maintainerr guard feasibility and native Plex redownload UI remain unverified."
 
 my_cinema_ui_and_lifecycle_source:
   status: "Source-tested and merged, NOT deployed or live-accepted"
@@ -250,7 +250,6 @@ current_state: >
   that policy until its seeding requirements are known.
 
 exact_next_action: >
-  Priority: establish current Maintainerr #62 safety/outcome through a trusted authorized operator.
   My Cinema #46 owner-approved retention design (2026-11-25) is planned only; next existing
   gate is loopback UI GET/plan and synthetic-only acceptance, then bounded historical archive.
   Do not activate removal or deploy on design approval. Preserve existing independent gates below.
@@ -289,7 +288,7 @@ important_open_loops:
   - "Kometa Phase 2A: scheduler/rotations accepted; Trending minimum fix component-tested. Natural below-minimum live observation is optional; additional Movies concepts and TV v2 remain deferred."
   - "Samsung Walter Mitty playback with SRT remains unresolved; client debug logs were successfully captured but contain no explicit decoder/MediaSource error. After buffering at 21:36.366, play() interruption warning occurred later. Next: sanitize the evidence for the related Plex forum report and seek deeper Samsung HTML player telemetry; no repeat-only test."
   - "Dexter/Carrie diagnostic 2026-11-04: source-only multi-service read-only probe merged in PR #48 and CI green; exact 3 Plex versions, missing SK Bazarr subtitles and 25 vs 14 Mbps causes NOT live-verified. Issue #47 owns exact host evidence; PAB #83 owns generic authenticated media.inspect resource transport; avoid duplicate special-purpose agent."
-  - "URGENT Maintainerr Lanterns: 2026-11-17 user sees 8-day action countdown but never played show. No live host access; original selection/action unknown. Source-only safe inspector PR #63 merged with CI PASS; Issue #62 remains open. Scoped trusted operator confirmation/exclusion before due date is needed to prevent potential accidental deletion; do not claim a protected item."
+  - "Lanterns #62: owner confirmed correct display on 2026-11-25 and closed the incident. Plex and Sonarr verified current episode availability. Original Maintainerr attribution unverified. See maintainerr_cleanup_safety."
   - "Radarr audio policy deployed and API-verified on 2026-10-19: four compatible audio CFs +1, ten other audio CFs 0; CF cutoff 0 with quality upgrades retained. Future guide sync needs separate drift review (latest preview adds IMF +20); Sonarr unchanged."
 
 stale_or_unknown:
