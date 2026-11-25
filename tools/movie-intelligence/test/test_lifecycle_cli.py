@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -6,7 +7,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from lifecycle_cli import watched_catalog, build_report, archived_receipts
+from archive import Blocked
+from lifecycle_cli import (archived_receipts, build_report, csfd_backfill_report,
+                           csfd_ratings_catalog, watched_catalog)
 from test_lifecycle import IDENTITY, RADARR, movie, receipt
 
 
@@ -77,6 +80,43 @@ class InventoryTest(unittest.TestCase):
         c.commit();c.close()
         with self.assertRaises(ValueError):
             watched_catalog(self.db)
+
+    def test_csfd_backfill_requires_complete_ratings_mirror(self):
+        with closing(sqlite3.connect(self.db)) as c, c:
+            c.executescript("""
+                ALTER TABLE user_movies ADD COLUMN my_rating REAL;
+                UPDATE user_movies SET my_rating=4 WHERE movie_id=1;
+                INSERT INTO external_ids VALUES (1,'csfd','11'),(2,'csfd','22');
+                INSERT INTO movies VALUES (3,'Non-CSFD',2022);
+                INSERT INTO user_movies VALUES (3,1,4);
+                CREATE TABLE sync_runs(id INTEGER PRIMARY KEY, source TEXT, status TEXT,
+                    finished_at TEXT, items_seen INTEGER, items_added INTEGER, items_updated INTEGER);
+                INSERT INTO sync_runs VALUES (1,'csfd_ratings','success','2026-01-01',1,1,0);
+            """)
+        self.assertEqual(csfd_ratings_catalog(self.db),
+                         ("2026-01-01", [(1, "Fixture", 2024, "11", "123", "tt1234567")]))
+        with closing(sqlite3.connect(self.db)) as c, c:
+            c.execute("UPDATE sync_runs SET items_seen=2")
+        with self.assertRaisesRegex(ValueError, "csfd_ratings_mirror_mismatch"):
+            csfd_ratings_catalog(self.db)
+
+    def test_csfd_backfill_excludes_libraries_and_defers_identity_issues(self):
+        ratings = ("2026-01-01", [
+            (1, "Movies title", 2024, "11", "123", "tt1234567"),
+            (2, "Watched title", 2024, "22", "456", "tt2345678"),
+            (3, "Incomplete", 2024, "33", None, "tt3456789"),
+            (4, "Conflicting", 2024, "44", "789", "tt4567890"),
+            (5, "Clean", 2024, "55", "345", "tt5678901"),
+        ])
+        movies = [movie(1244), {"Guid": [{"id": "tmdb://789"}, {"id": "imdb://tt1111111"}]}]
+        archive = [{"Guid": [{"id": "tmdb://456"}, {"id": "imdb://tt2345678"}]}]
+        report = csfd_backfill_report(ratings, movies, archive, limit=1)
+        self.assertEqual(report["decisions"], {"in_movies": 1, "in_watched": 1,
+                         "incomplete_identity": 1, "conflicting_identity": 1,
+                         "candidate_for_exact_plan": 1})
+        self.assertEqual([m["tmdb"] for m in report["items"]], [345])
+        with self.assertRaisesRegex(Blocked, "unknown_plex_identity"):
+            csfd_backfill_report(ratings, [{}], archive, limit=1)
 
 if __name__=='__main__':
     unittest.main()

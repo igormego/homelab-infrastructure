@@ -13,7 +13,7 @@ import re
 import sqlite3
 import sys
 
-from archive import ReadAPI
+from archive import Blocked, ReadAPI, canonical_ids, matching
 from lifecycle import plan_lifecycle
 
 MAX_RECORDS = 10000
@@ -54,7 +54,39 @@ def watched_catalog(db_path):
         db.close()
 
 
-def plex_listing(client, library):
+def csfd_ratings_catalog(db_path):
+    """Read the existing ČSFD ratings mirror and validate its latest complete sync."""
+    db = sqlite3.connect(Path(db_path).resolve().as_uri() + "?mode=ro", uri=True)
+    try:
+        db.execute("PRAGMA query_only=ON")
+        db.execute("BEGIN")
+        run = db.execute("""
+          SELECT status, finished_at, items_seen, items_added, items_updated
+          FROM sync_runs WHERE source='csfd_ratings' ORDER BY id DESC LIMIT 1
+        """).fetchone()
+        rows = db.execute("""
+          SELECT m.id,m.title,m.year,c.external_id,t.external_id,i.external_id
+          FROM user_movies u JOIN movies m ON m.id=u.movie_id
+          JOIN external_ids c ON c.movie_id=m.id AND c.source='csfd'
+          LEFT JOIN external_ids t ON t.movie_id=m.id AND t.source='tmdb'
+          LEFT JOIN external_ids i ON i.movie_id=m.id AND i.source='imdb'
+          WHERE u.watched=1 AND u.my_rating IS NOT NULL
+          ORDER BY m.id LIMIT ?
+        """, (MAX_RECORDS + 1,)).fetchall()
+        if not run or run[0] != "success" or not run[1] or any(
+            type(value) is not int or value < 0 for value in run[2:]
+        ):
+            raise ValueError("csfd_sync_unverified")
+        if len(rows) > MAX_RECORDS or run[2] != len(rows) or run[3] + run[4] != len(rows):
+            raise ValueError("csfd_ratings_mirror_mismatch")
+        if len({row[0] for row in rows}) != len(rows) or len({row[3] for row in rows}) != len(rows):
+            raise ValueError("csfd_ratings_mirror_ambiguous")
+        return run[1], rows
+    finally:
+        db.close()
+
+
+def plex_listing(client, library, *, check_files=True):
     rows = [];total=None
     for start in range(0,MAX_RECORDS,100):
         c=client.get(f"/library/sections/{library}/all?type=1&includeGuids=1&X-Plex-Container-Start={start}&X-Plex-Container-Size=100")["MediaContainer"]
@@ -70,6 +102,8 @@ def plex_listing(client, library):
             break
         if len(rows)>total or len(batch)!=100:raise ValueError("plex_listing_incomplete")
     if len(rows)!=total: raise ValueError("plex_listing_incomplete")
+    if not check_files:
+        return rows
     # Verify actual on-disk file availability for each item, not only Plex metadata.
     details=[]
     for row in rows:
@@ -81,7 +115,7 @@ def plex_listing(client, library):
     return details
 
 
-def snapshot(*, db_path, plex, radarr, movies_id, archive_id):
+def verify_plex_scope(plex, movies_id, archive_id):
     if movies_id==archive_id or min(movies_id,archive_id)<1:
         raise ValueError("invalid_library_scope")
     sections=plex.get("/library/sections")["MediaContainer"]["Directory"]
@@ -90,11 +124,55 @@ def snapshot(*, db_path, plex, radarr, movies_id, archive_id):
     if len(main)!=1 or main[0].get("title")!="Movies" or main[0].get("type")!="movie" or (
             len(arc)!=1 or not arc[0].get("title","").startswith("Watched") or arc[0].get("type")!="movie"):
         raise ValueError("unexpected_library_scope")
+
+
+def snapshot(*, db_path, plex, radarr, movies_id, archive_id):
+    verify_plex_scope(plex, movies_id, archive_id)
     radarr_movies=radarr.get("/api/v3/movie")
     if not isinstance(radarr_movies,list) or len(radarr_movies)>MAX_RECORDS:
         raise ValueError("radarr_listing_incomplete")
     return (watched_catalog(db_path),radarr_movies,
             plex_listing(plex,movies_id),plex_listing(plex,archive_id))
+
+
+def csfd_backfill_report(ratings, movies, archive, *, limit):
+    """Select clean IDs for exact planning. Existing library entries are excluded."""
+    synced_at, rows = ratings
+    for item in (*movies, *archive):
+        canonical_ids(item)
+    counts = Counter()
+    tmdb_counts = Counter(row[4] for row in rows)
+    imdb_counts = Counter(row[5] for row in rows)
+    candidates = []
+    for _, title, year, csfd, tmdb, imdb in rows:
+        if not all((
+            isinstance(csfd, str) and re.fullmatch(r"[1-9][0-9]*", csfd),
+            isinstance(tmdb, str) and re.fullmatch(r"[1-9][0-9]*", tmdb),
+            isinstance(imdb, str) and re.fullmatch(r"tt[0-9]{7,10}", imdb),
+        )):
+            counts["incomplete_identity"] += 1
+            continue
+        if tmdb_counts[tmdb] != 1 or imdb_counts[imdb] != 1:
+            counts["conflicting_identity"] += 1
+            continue
+        identity = {"tmdb": int(tmdb), "imdb": imdb}
+        try:
+            in_movies = matching(movies, identity)
+            in_archive = matching(archive, identity)
+        except Blocked:
+            counts["conflicting_identity"] += 1
+            continue
+        if in_movies:
+            counts["in_movies"] += 1
+        elif in_archive:
+            counts["in_watched"] += 1
+        else:
+            counts["candidate_for_exact_plan"] += 1
+            if len(candidates) < limit:
+                candidates.append({**identity, "title": title, "year": year})
+    return {"read_only": True, "scope": "csfd_ratings_backfill", "source_synced_at": synced_at,
+            "count": len(rows), "decisions": dict(sorted(counts.items())), "items": candidates,
+            "truncated": counts["candidate_for_exact_plan"] > len(candidates)}
 
 
 
@@ -151,14 +229,27 @@ def build_report(catalog,radarr_movies,movies,archive,receipts=None,limit=30):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--limit",type=int,default=30)
+    ap.add_argument("--csfd-backfill", action="store_true",
+                    help="Plan only films from ČSFD ratings outside Plex Movies and Watched")
     args=ap.parse_args()
     if not 0<=args.limit<=100: raise ValueError("invalid_preview_limit")
     need=lambda k:os.environ[k]
     plex=ReadAPI(need("PLEX_BASE_URL"),need("PLEX_TOKEN"),"X-Plex-Token")
+    movies_id = int(need("PLEX_MOVIES_LIBRARY_ID"))
+    archive_id = int(need("PLEX_ARCHIVE_LIBRARY_ID"))
+    if args.csfd_backfill:
+        verify_plex_scope(plex, movies_id, archive_id)
+        report = csfd_backfill_report(
+            csfd_ratings_catalog(need("MOVIE_DB_PATH")),
+            plex_listing(plex, movies_id, check_files=False),
+            plex_listing(plex, archive_id, check_files=False),
+            limit=args.limit,
+        )
+        print(json.dumps(report, ensure_ascii=False))
+        return
     radarr=ReadAPI(need("RADARR_BASE_URL"),need("RADARR_API_KEY"))
     data=snapshot(db_path=need("MOVIE_DB_PATH"),plex=plex,radarr=radarr,
-                  movies_id=int(need("PLEX_MOVIES_LIBRARY_ID")),
-                  archive_id=int(need("PLEX_ARCHIVE_LIBRARY_ID")))
+                  movies_id=movies_id,archive_id=archive_id)
     receipts=archived_receipts(os.environ.get('MY_CINEMA_ARCHIVE_STATE_DIR'))
     print(json.dumps(build_report(*data,receipts=receipts,limit=args.limit),ensure_ascii=False))
 
