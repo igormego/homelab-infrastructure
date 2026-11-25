@@ -1,5 +1,5 @@
 import unittest
-from archive_batch import plan_archive_batch, execute_archive_batch
+from archive_batch import execute_archive_batch, plan_archive_batch, plan_next_archive_batch
 
 A = "a" * 64
 
@@ -69,6 +69,26 @@ class ArchiveBatchTest(unittest.TestCase):
         p=execute_archive_batch(self.a,[1],reviewed_batch_fingerprint=fp,execute=True)
         self.assertEqual(p["decision"],"needs_review")
         self.assertTrue(p["mutation_attempted"])
+
+    def test_next_batch_defers_title_issue_and_uses_existing_fingerprint(self):
+        self.a.plans[1] = {"decision": "needs_review", "reason": "watch_history_count_conflict",
+                           "mutation_attempted": False}
+        self.a.plans[4] = {"decision": "already_archived", "verified": {"poster": "verified"},
+                           "mutation_attempted": False}
+        plan = plan_next_archive_batch(self.a, [1, 4, 3, 2, 5], max_movies=2)
+        self.assertEqual(plan["decision"], "ready")
+        self.assertEqual(plan["deferred"], [{"tmdb_id": 1, "reason": "watch_history_count_conflict"}])
+        self.assertEqual([r["tmdb_id"] for r in plan["records"]], [2, 3])
+        self.assertEqual(self.a.calls, [("plan", 1), ("plan", 4), ("plan", 3), ("plan", 2)])
+        self.assertEqual(plan["batch_fingerprint"], self.approve([2, 3]))
+
+    def test_next_batch_stops_on_shared_source_failure(self):
+        self.a.plans[2] = {"decision": "blocked", "reason": "api_unavailable",
+                           "mutation_attempted": False}
+        plan = plan_next_archive_batch(self.a, [1, 2, 3])
+        self.assertEqual((plan["decision"], plan["blocked_tmdb"]), ("blocked", 2))
+        self.assertNotIn("batch_fingerprint", plan)
+        self.assertEqual(self.a.calls, [("plan", 1), ("plan", 2)])
 
 if __name__=="__main__":
     unittest.main()

@@ -198,3 +198,12 @@ small owner-reviewed batches after host-level runtime acceptance. A process
 crash after a subset has been created requires a new plan for only remaining
 candidates; existing per-film receipts prevent duplicate publication.
 
+For historical ČSFD backfill, use the read-only
+[`lifecycle_cli.py --csfd-backfill`](MY-CINEMA-LIFECYCLE.md) shortlist before
+calling `plan_next_archive_batch(controller, candidate_ids)`. The selector
+sets aside recognized title-specific issues, skips verified existing archive
+entries and stops on shared or unclassified preflight failures. Its digest
+binds only the selected records and is compatible with the existing exact
+batch review and execution guard. Recheck ČSFD membership and absence from
+Movies before reviewing the exact batch.
+

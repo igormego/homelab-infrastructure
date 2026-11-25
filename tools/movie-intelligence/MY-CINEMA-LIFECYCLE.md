@@ -64,6 +64,14 @@ directory, with regular 0600 files and matching published file SHA-256.
 The output contains only a bounded sample of personal titles, plus aggregate
 counts; it never writes a snapshot file.
 
+For historical backfill, run the same CLI with `--csfd-backfill`. This mode uses
+the existing ČSFD ratings mirror and checks its counts against the latest
+complete ratings sync. It skips films already indexed in Movies or Watched and
+reports incomplete or conflicting title identities for later review. An
+unidentified Plex entry blocks proof that a candidate is absent. This mode
+requires only the database and Plex settings above. Its preview supplies
+candidates for an exact archive plan and does not authorize a write.
+
 ## Explicitly NOT implemented
 
 This source-only planner **does not** retire Plex items or delete their
