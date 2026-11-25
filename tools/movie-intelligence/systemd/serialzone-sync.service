@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh personal SerialZone source snapshot
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/media-intelligence/serialzone.env
+ExecStart=/usr/bin/python3 %h/.local/lib/media-intelligence/serialzone_sync.py --apply
+UMask=0077
+NoNewPrivileges=yes
+TimeoutStartSec=20min

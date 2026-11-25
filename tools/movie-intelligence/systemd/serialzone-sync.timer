@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly personal SerialZone refresh
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00 Europe/Bratislava
+Persistent=true
+Unit=serialzone-sync.service
+
+[Install]
+WantedBy=timers.target
